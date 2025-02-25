@@ -7,7 +7,7 @@ use anchor_spl::{
     },
     token::{mint_to, Mint, MintTo, Token, TokenAccount},
 };
-declare_id!("Cwx5vjNfLwqUe1zhcK93Zyi3mjKNtYddrDnUikcMVj5M");
+declare_id!("toEzFjcP9oeQwyLvbxguJqUaQkSGAi4vKDPv6ubyBZv");
 
 #[program]
 mod nft_id_contract {

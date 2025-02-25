@@ -5,14 +5,18 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-nft_id_contract = "CWk1NdsSZKfhxnXTMaESKfTXCJQEk6fYBvY6UKx8sN48"
+nft_id_contract = "toEzFjcP9oeQwyLvbxguJqUaQkSGAi4vKDPv6ubyBZv"
+
+[programs.devnet]
+nft_id_contract = "toEzFjcP9oeQwyLvbxguJqUaQkSGAi4vKDPv6ubyBZv"
+
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
-wallet = "~/.config/solana/id.json"
+cluster = "https://api.devnet.solana.com"
+wallet = "/Users/tonywu/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
