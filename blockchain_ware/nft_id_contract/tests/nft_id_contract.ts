@@ -4,11 +4,11 @@ import assert from "assert";
 import BN from "bn.js";
 import { NftIdContract } from "../target/types/nft_id_contract";
 
-describe("spl program test", () => {
+describe("NFT ID Minting", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
 
-  const program = anchor.workspace.Spl as anchor.Program<NftIdContract>;
+  const program = anchor.workspace.NftIdContract as anchor.Program<NftIdContract>;
 
   const METADATA_SEED = "metadata";
   const TOKEN_METADATA_PROGRAM_ID = new web3.PublicKey(
@@ -44,7 +44,7 @@ describe("spl program test", () => {
     if (info) {
       return; // Do not attempt to initialize if already initialized
     }
-    console.log("  Mint not found. Initializing Program...");
+    console.log(" Mint not found. Initializing Program...");
 
     const context = {
       metadata: metadataAddress,
