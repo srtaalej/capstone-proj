@@ -5,12 +5,13 @@ use anchor_spl::{
         create_metadata_accounts_v3, mpl_token_metadata::types::DataV2, CreateMetadataAccountsV3,
         Metadata as Metaplex,
     },
-    token::{mint_to, Mint, MintTo, Token, TokenAccount},
+    token::{mint_to, Burn, Mint, MintTo, Token, TokenAccount, burn},
 };
+
 declare_id!("toEzFjcP9oeQwyLvbxguJqUaQkSGAi4vKDPv6ubyBZv");
 
 #[program]
-mod nft_id_contract {
+pub mod nft_id_contract {
     use super::*;
 
     pub fn initiate_token(_ctx: Context<InitToken>, metadata: InitTokenParams) -> Result<()> {
@@ -46,8 +47,11 @@ mod nft_id_contract {
         msg!("Token mint created successfully.");
         Ok(())
     }
-
     pub fn mint_tokens(ctx: Context<MintTokens>, quantity: u64) -> Result<()> {
+        if ctx.accounts.destination.amount > 0 {
+            return Err(ErrorCode::AlreadyMinted.into());
+        }
+
         let seeds = &["mint".as_bytes(), &[ctx.bumps.mint]];
         let signer = [&seeds[..]];
 
@@ -64,16 +68,40 @@ mod nft_id_contract {
             quantity,
         )?;
 
+        msg!("Minted {} tokens.", quantity);
         Ok(())
     }
 
+    pub fn burn_token(ctx: Context<BurnToken>) -> Result<()> {
+        if ctx.accounts.destination.amount == 0 {
+            return Err(ErrorCode::NoTokensToBurn.into());
+        }
+        let seeds = &["mint".as_bytes(), &[ctx.bumps.mint]];
+        let signer = [&seeds[..]];
+
+        burn(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Burn {
+                    mint: ctx.accounts.mint.to_account_info(),
+                    from: ctx.accounts.destination.to_account_info(),
+                    authority: ctx.accounts.owner.to_account_info(),
+                },
+                &signer,
+            ),
+            1,
+        )?;
+
+        msg!("Token burned successfully.");
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
 #[instruction(params: InitTokenParams)]
 pub struct InitToken<'info> {
     #[account(mut)]
-    /// CHECK: UncheckedAccount
+    /// CHECK: Metadata account is unchecked because it's created via CPI.
     pub metadata: UncheckedAccount<'info>,
     #[account(
         init,
@@ -116,10 +144,36 @@ pub struct MintTokens<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
+#[derive(Accounts)]
+pub struct BurnToken<'info> {
+    #[account(
+        mut,
+        seeds = [b"mint"],
+        bump,
+        mint::authority = mint,
+    )]
+    pub mint: Account<'info, Mint>,
+    #[account(
+        mut,
+        // Ensure the token account belongs to the owner.
+        constraint = destination.owner == owner.key()
+    )]
+    pub destination: Account<'info, TokenAccount>,
+    #[account(mut)]
+    pub owner: Signer<'info>,
+    pub token_program: Program<'info, Token>,
+}
+
 #[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
 pub struct InitTokenParams {
     pub name: String,
     pub symbol: String,
     pub uri: String,
     pub decimals: u8,
+}
+
+#[error_code]
+pub enum ErrorCode {
+    #[msg("Each wallet can only mint one BlockVote NFT.")]
+    AlreadyMinted,
 }
