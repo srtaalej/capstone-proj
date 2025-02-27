@@ -1,9 +1,15 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
+
+interface FAQItem {
+  question: string;
+  answer: string;
+}
 
 export default function FAQ() {
-  const faqs = [
+  const faqs: FAQItem[] = [
     {
       question: "What is Block Vote?",
       answer:
@@ -26,28 +32,26 @@ export default function FAQ() {
     },
   ];
 
-  const [activeIndex, setActiveIndex] = useState(null);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  const toggleFAQ = (index) => {
+  const toggleFAQ = (index: number): void => {
     setActiveIndex(activeIndex === index ? null : index);
   };
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Navigation Bar */}
       <nav className="flex justify-between items-center p-4 bg-white shadow-lg">
         <div className="text-xl font-bold text-gray-800">Block Vote</div>
         <div>
-          <a href="/" className="text-black hover:underline mr-4">
+          <Link href="/" className="text-black hover:underline mr-4">
             Home
-          </a>
-          <a href="/faq" className="text-black hover:underline">
+          </Link>
+          <Link href="/faq" className="text-black hover:underline">
             FAQ
-          </a>
+          </Link>
         </div>
       </nav>
 
-      {/* FAQ Content */}
       <main className="max-w-4xl mx-auto p-6">
         <h1 className="text-4xl font-semibold text-gray-800 text-center mb-8">
           Frequently Asked Questions
