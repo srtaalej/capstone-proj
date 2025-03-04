@@ -7,7 +7,7 @@ import { useState } from 'react'
 import NewPollModal from '../new_poll_creation/make_new_poll_card'
 
 export default function Navbar() {
-  const {wallet, connected} = useWallet()
+  const {connected} = useWallet()
   // for testing: const mockConnected = true;
   const {setVisible} = useWalletModal()
   const [isNewPollModalOpen, setIsNewPollModalOpen] = useState(false);
