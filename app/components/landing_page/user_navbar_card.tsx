@@ -22,14 +22,17 @@ export default function Navbar() {
   }
 
   return (
-    <Disclosure as="nav" className="bg-gray-800">
+    <Disclosure as="nav" className="bg-gray-900">
       <div className="mx-auto max-w-7xl px-2 sm:px-4 lg:px-8">
         <div className="relative flex h-16 items-center justify-between">
           <div className="flex items-center px-2 lg:px-0">
             <div className="shrink-0">
-              <span className="-ml-0.5 size-5 text-md font-semibold text-white ">
-                BlockVote
-              </span>
+              <a href='/' 
+                >
+                <span className="-ml-0.5 size-5 text-md font-semibold text-white ">
+                  BlockVote
+                </span>
+              </a>
               {/* <img
                 alt="Blockvote"
                 src="https://tailwindui.com/plus-assets/img/logos/mark.svg?color=indigo&shade=500"
