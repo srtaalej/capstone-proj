@@ -22,7 +22,7 @@ export default function Navbar() {
   }
 
   return (
-    <Disclosure as={"nav" as "nav"} className="bg-gray-800">
+    <Disclosure as="nav" className="bg-gray-800">
       <div className="mx-auto max-w-7xl px-2 sm:px-4 lg:px-8">
         <div className="relative flex h-16 items-center justify-between">
           <div className="flex items-center px-2 lg:px-0">
@@ -80,7 +80,7 @@ export default function Navbar() {
         <div className="space-y-1 px-2 pb-3 pt-2">
           {/* Current: "bg-gray-900 text-white", Default: "text-gray-300 hover:bg-gray-700 hover:text-white" */}
           <DisclosureButton
-            as={"a" as "a"}
+            as="a"
             href="#"
             className="block rounded-md bg-gray-900 px-3 py-2 text-base font-medium text-white"
           >
