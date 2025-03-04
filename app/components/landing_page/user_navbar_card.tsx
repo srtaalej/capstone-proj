@@ -3,7 +3,7 @@ import { MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/20/solid'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
-import { use, useState } from 'react'
+import { useState } from 'react'
 import NewPollModal from '../new_poll_creation/make_new_poll_card'
 
 export default function Navbar() {
