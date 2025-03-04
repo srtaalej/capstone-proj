@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Navbar from "../components/landing_page/Navbar";
+
 
 interface FAQItem {
   question: string;
@@ -40,17 +42,8 @@ export default function FAQ() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <nav className="flex justify-between items-center p-4 bg-white shadow-lg">
-        <div className="text-xl font-bold text-gray-800">Block Vote</div>
-        <div>
-          <Link href="/" className="text-black hover:underline mr-4">
-            Home
-          </Link>
-          <Link href="/faq" className="text-black hover:underline">
-            FAQ
-          </Link>
-        </div>
-      </nav>
+      {/* Navbar */}
+            <Navbar />
 
       <main className="max-w-4xl mx-auto p-6">
         <h1 className="text-4xl font-semibold text-gray-800 text-center mb-8">

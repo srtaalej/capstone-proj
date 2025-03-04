@@ -4,9 +4,19 @@ import React from "react";
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
 
 export default function Home() {
   const { publicKey, disconnect } = useWallet();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (publicKey) {
+      router.push("/post_login"); // Redirect after login
+    }
+  }, [publicKey, router]);
 
   return (
     <div className="min-h-screen bg-gray-100">
