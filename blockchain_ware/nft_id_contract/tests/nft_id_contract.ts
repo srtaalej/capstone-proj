@@ -3,12 +3,27 @@ import * as web3 from "@solana/web3.js";
 import assert from "assert";
 import BN from "bn.js";
 import { NftIdContract } from "../target/types/nft_id_contract";
+import { associatedAddress } from "@coral-xyz/anchor/dist/cjs/utils/token";
+import {
+  TOKEN_PROGRAM_ID,
+  MINT_SIZE,
+  createAssociatedTokenAccountInstruction,
+  getAssociatedTokenAddress,
+  createInitializeMintInstruction,
+} from "@solana/spl-token";
 
 describe("NFT ID Minting", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
 
   const program = anchor.workspace.NftIdContract as anchor.Program<NftIdContract>;
+
+  // Generate a random keypair that will represent our token
+  const mintKey: anchor.web3.Keypair = anchor.web3.Keypair.generate();
+
+  const key = anchor.AnchorProvider.env().wallet.publicKey;
+
+  let associatedTokenAccount = undefined;
 
   const METADATA_SEED = "metadata";
   const TOKEN_METADATA_PROGRAM_ID = new web3.PublicKey(
@@ -39,7 +54,12 @@ describe("NFT ID Minting", () => {
     TOKEN_METADATA_PROGRAM_ID
   );
 
+  
+
   it("Initialize", async () => {
+
+    
+
     const info = await program.provider.connection.getAccountInfo(mint);
     if (info) {
       return; // Do not attempt to initialize if already initialized
@@ -109,5 +129,39 @@ describe("NFT ID Minting", () => {
       postBalance,
       "Compare balances, it must be equal"
     );
+
+    // Get the ATA for a token and the account that we want to own the ATA (but it might not existing on the SOL network yet)
+    associatedTokenAccount = await getAssociatedTokenAddress(
+      mintKey.publicKey,
+      key
+    );
   });
+  it("Burn token", async () => {
+
+    
+    const from = await getAssociatedTokenAddress(mint, key);
+    // Get anchor's wallet's public key
+    const balance =  1;
+    console.log("balance-", balance)
+
+    const context = {
+      mint: mintKey.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      from: associatedTokenAccount,
+      authority: key,
+    }
+
+    const txBurn = await program.methods.burnToken(new anchor.BN(mintAmount * 10 ** metadata.decimals)).accounts(
+      context).rpc();
+
+    await program.provider.connection.confirmTransaction(txBurn);
+    console.log(`  https://explorer.solana.com/tx/${txBurn}?cluster=devnet`);
+    const postBalance = (
+      await program.provider.connection.getTokenAccountBalance(from)
+    ).value.uiAmount;
+    console.log("Burn Successful", postBalance);
+  });
+
 });
+
+

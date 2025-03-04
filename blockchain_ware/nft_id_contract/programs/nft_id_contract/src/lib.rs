@@ -1,13 +1,14 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token;
 use anchor_spl::{
     associated_token::AssociatedToken,
     metadata::{
         create_metadata_accounts_v3, mpl_token_metadata::types::DataV2, CreateMetadataAccountsV3,
         Metadata as Metaplex,
     },
-    token::{mint_to, Mint, MintTo, Token, TokenAccount},
+    token::{mint_to, Mint, MintTo, Token, TokenAccount, Burn},
 };
-declare_id!("Cwx5vjNfLwqUe1zhcK93Zyi3mjKNtYddrDnUikcMVj5M");
+declare_id!("5RZseTAbe1oif9o1m8umfrFcAdztYMkXetww8HKnLDFj");
 
 #[program]
 mod nft_id_contract {
@@ -67,6 +68,26 @@ mod nft_id_contract {
         Ok(())
     }
 
+    pub fn burn_token(ctx: Context<BurnToken>, amount: u64) -> Result<()> {
+        // let seeds = &["mint".as_bytes(), &[ctx.bumps.mint]];
+        // let signer = [&seeds[..]];
+
+        let cpi_accounts = Burn {
+            mint: ctx.accounts.mint.to_account_info(),
+            from: ctx.accounts.from.to_account_info(),
+            authority: ctx.accounts.mint.to_account_info(),
+        };
+
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        // Create the CpiContext we need for the request
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+
+        // Execute anchor's helper function to burn tokens
+        token::burn(cpi_ctx, amount)?;
+         
+        msg!("Token burned successfully.");
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -122,4 +143,18 @@ pub struct InitTokenParams {
     pub symbol: String,
     pub uri: String,
     pub decimals: u8,
+}
+
+
+#[derive(Accounts)]
+pub struct BurnToken<'info> {
+    /// CHECK: This is the token that we want to mint
+    #[account(mut)]
+    pub mint: Account<'info, Mint>,
+    pub token_program: Program<'info, Token>,
+    /// CHECK: This is the token account that we want to mint tokens to
+    #[account(mut)]
+    pub from: AccountInfo<'info>,
+    /// CHECK: the authority of the mint account
+    pub authority: Signer<'info>,
 }
