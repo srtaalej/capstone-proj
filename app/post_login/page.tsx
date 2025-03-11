@@ -6,94 +6,122 @@ import { clusterApiUrl, Connection } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { useRouter } from "next/navigation";
 import Navbar from "../components/landing_page/user_navbar_card";
+import { ClipboardDocumentIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 
 export default function Dashboard() {
   const { publicKey } = useWallet();
+  const mockPublicKey = { toString: () => "DummyPublicKey123456789" }; // Mock public key for testing
   const router = useRouter();
   const [needsKYC, setNeedsKYC] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    // Redirect to landing page if user is not logged in
-    if (!publicKey) {
-      router.push("/");
-      return;
-    }
+    // Comment out the redirect for testing
+    // if (!publicKey) {
+    //   router.push("/");
+    //   return;
+    // }
 
     const checkNFTs = async () => {
       try {
-        const connection = new Connection(clusterApiUrl("devnet"));
-        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
-          programId: TOKEN_PROGRAM_ID,
-        });
-
-        let hasNFT = false;
-        tokenAccounts.value.forEach((tokenAccount) => {
-          const tokenAmount = tokenAccount.account.data.parsed.info.tokenAmount;
-          if (tokenAmount.amount === "1" && tokenAmount.decimals === 0) {
-            hasNFT = true;
-          }
-        });
-
-        setNeedsKYC(!hasNFT);
+        // Always set to false for testing
+        setNeedsKYC(false);
+        setLoading(false);
       } catch (error) {
         console.error("Error checking NFTs:", error);
-        setNeedsKYC(true);
-      } finally {
+        setNeedsKYC(false);
         setLoading(false);
       }
     };
 
     checkNFTs();
-  }, [publicKey, router]);
+  }, [router]);
+
+  const handleCopyAddress = async () => {
+    await navigator.clipboard.writeText(mockPublicKey.toString());
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-900">
       {/* Navbar */}
-      <Navbar/>
+      <Navbar />
   
       {/* Dashboard Content */}
-      <main className="max-w-4xl mx-auto mt-10 p-6 bg-white rounded-xl shadow-lg">
-        <h1 className="text-4xl font-bold text-gray-800 mb-6">Dashboard</h1>
-  
-        {publicKey ? (
-          <div className="space-y-6">
-            {/* Wallet Information */}
-            <div className="p-4 border rounded-lg bg-gray-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-700">Wallet Address</h2>
-                <p className="text-gray-600 font-mono text-sm bg-gray-200 px-3 py-1 rounded-md">
-                  {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
-                </p>
-              </div>
-              <button
-                onClick={() => navigator.clipboard.writeText(publicKey.toString())}
-                className="text-blue-500 hover:underline"
-              >
-                Copy
-              </button>
-            </div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="space-y-12">
+          <div className="border-b border-white/10 pb-12">
+            <h1 className="text-base/7 font-semibold text-white">Dashboard</h1>
+            <p className="mt-1 text-sm/6 text-gray-400">
+              View and manage your account information and voting status.
+            </p>
 
-          
-            {/* KYC Status */}
-            <div className="p-4 border rounded-lg bg-gray-100 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-700">KYC Status</h2>
-              {loading ? (
-                <p className="text-gray-500">Checking NFT ownership...</p>
-              ) : (
-                <span
-                  className={`px-3 py-1 rounded-full text-white text-sm font-semibold ${
-                    needsKYC ? "bg-red-500" : "bg-green-500"
-                  }`}
-                >
-                  {needsKYC ? "Required" : "Verified"}
-                </span>
-              )}
+            <div className="mt-10 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+              {/* Wallet Information */}
+              <div className="col-span-full">
+                <h2 className="text-sm/6 font-medium text-white mb-4">Wallet Information</h2>
+                <div className="rounded-lg bg-white/5 px-6 py-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-400">Connected Address</p>
+                      <p className="font-mono text-sm text-white">
+                        {mockPublicKey.toString().slice(0, 8)}...{mockPublicKey.toString().slice(-8)}
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleCopyAddress}
+                      className="rounded-md bg-white/10 p-2 text-gray-400 hover:text-white hover:bg-white/20 transition-colors"
+                      title="Copy address"
+                    >
+                      {copied ? (
+                        <CheckCircleIcon className="h-5 w-5 text-green-400" />
+                      ) : (
+                        <ClipboardDocumentIcon className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* KYC Status */}
+              <div className="col-span-full">
+                <h2 className="text-sm/6 font-medium text-white mb-4">Account Status</h2>
+                <div className="rounded-lg bg-white/5 px-6 py-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-400">KYC Verification</p>
+                      <div className="flex items-center gap-x-2">
+                        {loading ? (
+                          <div className="animate-pulse bg-white/10 h-5 w-20 rounded"></div>
+                        ) : (
+                          <>
+                            {needsKYC ? (
+                              <XCircleIcon className="h-5 w-5 text-red-500" />
+                            ) : (
+                              <CheckCircleIcon className="h-5 w-5 text-green-400" />
+                            )}
+                            <span className="text-sm text-white">
+                              {needsKYC ? "Verification Required" : "Verified"}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    {needsKYC && (
+                      <button
+                        className="rounded-md bg-indigo-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                      >
+                        Complete KYC
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        ) : (
-          <p className="text-lg text-gray-600">Redirecting...</p> 
-        )}
+        </div>
       </main>
     </div>
   );

@@ -30,8 +30,7 @@ export default function HeroSection() {
               Fast and secure voting on Blockchain
             </h1>
             <p className="mt-8 text-pretty text-lg font-medium text-gray-400 sm:text-xl/8">
-              Anim aute id magna aliqua ad ad non deserunt sunt. Qui irure qui lorem cupidatat commodo. Elit sunt amet
-              fugiat veniam occaecat.
+              Experience the future of voting with unmatched security and transparency. Our blockchain technology ensures every vote is tamper-proof, verifiable, and instantly counted.
             </p>
             <div className="mt-10 flex items-center justify-center gap-x-6">
               <button
