@@ -5,6 +5,7 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import { useState } from 'react'
 import NewPollModal from '../new_poll_creation/make_new_poll_card'
+import Link from 'next/link'
 
 export default function Navbar() {
   const {connected} = useWallet()
@@ -29,7 +30,7 @@ export default function Navbar() {
             <div className="shrink-0">
               <a href='/' 
                 >
-                <span className="-ml-0.5 size-5 text-md font-semibold text-white ">
+                <span className="-ml-0.5 text-md font-semibold text-white ">
                   BlockVote
                 </span>
               </a>
@@ -40,15 +41,23 @@ export default function Navbar() {
               /> */}
             </div>
             <div className="hidden lg:ml-6 lg:block">
-              <div className="shrink-0">
+              <div className="flex items-center space-x-4">
                 <DisclosureButton
                   onClick={handleNewPollClick}
                   type="button"
                   className="relative inline-flex items-center gap-x-1.5 rounded-md bg-indigo-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
                 >
-                  <PlusIcon aria-hidden="true" className="-ml-0.5 size-5" />
+                  <PlusIcon aria-hidden="true" className="-ml-0.5 h-5 w-5" />
                   New Poll
                 </DisclosureButton>
+                {connected && (
+                  <Link
+                    href="/post_login"
+                    className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    Dashboard
+                  </Link>
+                )}
               </div>
             </div>
           </div>
@@ -81,14 +90,14 @@ export default function Navbar() {
 
       <DisclosurePanel className="lg:hidden">
         <div className="space-y-1 px-2 pb-3 pt-2">
-          {/* Current: "bg-gray-900 text-white", Default: "text-gray-300 hover:bg-gray-700 hover:text-white" */}
-          <DisclosureButton
-            as="a"
-            href="#"
-            className="block rounded-md bg-gray-900 px-3 py-2 text-base font-medium text-white"
-          >
-            Dashboard
-          </DisclosureButton>
+          {connected && (
+            <Link
+              href="/post_login"
+              className="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+            >
+              Dashboard
+            </Link>
+          )}
         </div>
       </DisclosurePanel>
         <NewPollModal

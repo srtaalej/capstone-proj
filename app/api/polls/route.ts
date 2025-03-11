@@ -1,18 +1,32 @@
 import { NextResponse } from "next/server";
-import pool from "@/app/lib/db";
+
+// Dummy data for testing
+let dummyPolls = [
+  {
+    id: 1,
+    name: "Test Poll 1",
+    created_at: new Date().toISOString()
+  },
+  {
+    id: 2,
+    name: "Test Poll 2",
+    created_at: new Date().toISOString()
+  }
+];
 
 // Fetch all polls
 export async function GET() {
-  const result = await pool.query("SELECT * FROM polls ORDER BY created_at DESC");
-  return NextResponse.json(result.rows);
+  return NextResponse.json(dummyPolls);
 }
 
 // Create a new poll
 export async function POST(req: Request) {
   const { name } = await req.json();
-  const result = await pool.query(
-    "INSERT INTO polls (name) VALUES ($1) RETURNING *",
-    [name]
-  );
-  return NextResponse.json(result.rows[0]);
+  const newPoll = {
+    id: dummyPolls.length + 1,
+    name,
+    created_at: new Date().toISOString()
+  };
+  dummyPolls.push(newPoll);
+  return NextResponse.json(newPoll);
 }
