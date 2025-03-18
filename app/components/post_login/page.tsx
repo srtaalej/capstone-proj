@@ -5,10 +5,12 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { clusterApiUrl, Connection } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { useRouter } from "next/navigation";
-import Navbar from "../components/landing_page/user_navbar_card";
+import Navbar from "../landing_page/user_navbar_card";
+import { ClipboardDocumentIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 
 export default function Dashboard() {
   const { publicKey } = useWallet();
+  const mockPublicKey = { toString: () => "DummyPublicKey123456789" }; // Mock public key for testing
   const router = useRouter();
   const [needsKYC, setNeedsKYC] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
@@ -16,6 +18,7 @@ export default function Dashboard() {
   const [kycResponse, setKycResponse] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<any>(null); // Store extracted data
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     //if (!publicKey) {
@@ -25,30 +28,24 @@ export default function Dashboard() {
 
     const checkNFTs = async () => {
       try {
-        const connection = new Connection(clusterApiUrl("devnet"));
-        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
-          programId: TOKEN_PROGRAM_ID,
-        });
-
-        let hasNFT = false;
-        tokenAccounts.value.forEach((tokenAccount) => {
-          const tokenAmount = tokenAccount.account.data.parsed.info.tokenAmount;
-          if (tokenAmount.amount === "1" && tokenAmount.decimals === 0) {
-            hasNFT = true;
-          }
-        });
-
-        setNeedsKYC(!hasNFT);
+        // Always set to false for testing
+        setNeedsKYC(false);
+        setLoading(false);
       } catch (error) {
         console.error("Error checking NFTs:", error);
-        setNeedsKYC(true);
-      } finally {
+        setNeedsKYC(false);
         setLoading(false);
       }
     };
 
     checkNFTs();
-  }, [publicKey, router]);
+  }, [router]);
+
+  const handleCopyAddress = async () => {
+    await navigator.clipboard.writeText(mockPublicKey.toString());
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
