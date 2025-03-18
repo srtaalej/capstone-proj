@@ -1,13 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import FaqCard from "../faq/faq_card";
 
 export default function HeroSection() {
-  const [showFaq, setShowFaq] = useState(false);
-  const { publicKey, disconnect } = useWallet();
+  const publicKey = useWallet();
 
   const scrollToPolls = () => {
     const pollsSection = document.getElementById("public-polls");
@@ -53,3 +50,4 @@ export default function HeroSection() {
     </div>
   );
 }
+
