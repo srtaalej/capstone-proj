@@ -2,14 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { clusterApiUrl, Connection } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { useRouter } from "next/navigation";
 import Navbar from "../landing_page/user_navbar_card";
 import { ClipboardDocumentIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 
 export default function Dashboard() {
-  const { publicKey } = useWallet();
+  const { publicKey, disconnect } = useWallet();
   const mockPublicKey = { toString: () => "DummyPublicKey123456789" }; // Mock public key for testing
   const router = useRouter();
   const [needsKYC, setNeedsKYC] = useState<boolean | null>(null);
@@ -48,7 +46,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-900">
       {/* Navbar */}
       <Navbar />
-  
+
       {/* Dashboard Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="space-y-12">
@@ -111,13 +109,24 @@ export default function Dashboard() {
                     </div>
                     {needsKYC && (
                       <button
-                        className="rounded-md bg-indigo-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                        className="rounded-md bg-indigo-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400"
                       >
                         Complete KYC
                       </button>
                     )}
                   </div>
                 </div>
+                {/* Disconnect Button */}
+                {publicKey && (
+                  <div className="mt-4 flex justify-start">
+                    <button
+                      onClick={disconnect}
+                      className="rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 transition"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
