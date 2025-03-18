@@ -1,6 +1,6 @@
 import { Pool } from "pg";
 
-const pool = new Pool({
+export const pool = new Pool({
   user: process.env.POSTGRES_USER || 'postgres',
   password: process.env.POSTGRES_PASSWORD,
   host: process.env.POSTGRES_HOST || 'localhost',

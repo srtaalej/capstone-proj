@@ -1,5 +1,5 @@
 import {Fragment, useState} from 'react'
-import {Dialog, DialogPanel, DialogTitle, Transition} from '@headlessui/react'
+import {Dialog, DialogPanel, DialogTitle, Transition, TransitionChild} from '@headlessui/react'
 import { XMarkIcon} from '@heroicons/react/20/solid'
 import { PollFormData } from '@/app/types/poll'
 
@@ -67,7 +67,7 @@ export default function NewPollModal({isOpen, setIsOpen}: NewPollModalProps) {
     return (
         <Transition appear show={isOpen} as={Fragment}>
             <Dialog as="div" className="relative z-50" onClose={setIsOpen}>
-                <Transition.Child
+                <TransitionChild
                     as={Fragment}
                     enter="ease-out duration-300"
                     enterFrom="opacity-0"
@@ -77,11 +77,11 @@ export default function NewPollModal({isOpen, setIsOpen}: NewPollModalProps) {
                     leaveTo="opacity-0"
                 >
                     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
-                </Transition.Child>
+                </TransitionChild>
 
                 <div className="fixed inset-0 z-10 overflow-y-auto">
                     <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                        <Transition.Child
+                        <TransitionChild
                             as={Fragment}
                             enter="ease-out duration-300"
                             enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
@@ -224,7 +224,7 @@ export default function NewPollModal({isOpen, setIsOpen}: NewPollModalProps) {
                                     </div>
                                 </div>
                             </DialogPanel>
-                        </Transition.Child>
+                        </TransitionChild>
                     </div>
                 </div>
             </Dialog>

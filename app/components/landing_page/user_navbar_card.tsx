@@ -92,7 +92,7 @@ export default function Navbar() {
                 </DisclosureButton>
                 {mockConnected && (  // Use mockConnected instead of connected
                   <Link
-                    href="/post_login"
+                    href="/components/post_login"
                     className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-semibold"
                   >
                     Dashboard
