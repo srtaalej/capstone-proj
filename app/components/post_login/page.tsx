@@ -5,7 +5,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { clusterApiUrl, Connection } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { useRouter } from "next/navigation";
-import Navbar from "../components/landing_page/user_navbar_card";
+import Navbar from "../landing_page/user_navbar_card";
 import { ClipboardDocumentIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 
 export default function Dashboard() {
