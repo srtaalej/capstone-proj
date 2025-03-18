@@ -21,25 +21,39 @@ export default function Dashboard() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    //if (!publicKey) {
-      //router.push("/");
-      //return;
-    //}
-
+    if (!publicKey) {
+      router.push("/");
+      return;
+    }
+  
     const checkNFTs = async () => {
       try {
-        // Always set to false for testing
-        setNeedsKYC(false);
-        setLoading(false);
+        const connection = new Connection(clusterApiUrl("devnet"));
+        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+          programId: TOKEN_PROGRAM_ID,
+        });
+  
+        let hasNFT = false;
+  
+        tokenAccounts.value.forEach((tokenAccount) => {
+          const tokenAmount = tokenAccount.account.data.parsed.info.tokenAmount;
+          if (tokenAmount.amount === "1" && tokenAmount.decimals === 0) {
+            hasNFT = true;
+          }
+        });
+  
+        console.log("🔍 NFT Ownership:", hasNFT);
+        setNeedsKYC(!hasNFT); // ✅ KYC required if no NFT found
       } catch (error) {
         console.error("Error checking NFTs:", error);
-        setNeedsKYC(false);
+        setNeedsKYC(true); // Assume KYC required on error
+      } finally {
         setLoading(false);
       }
     };
-
+  
     checkNFTs();
-  }, [router]);
+  }, [publicKey, router]);
 
   const handleCopyAddress = async () => {
     await navigator.clipboard.writeText(mockPublicKey.toString());
