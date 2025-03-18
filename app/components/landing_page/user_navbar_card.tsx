@@ -18,7 +18,7 @@ export default function Navbar() {
   const [debouncedQuery] = useDebounce(searchQuery, 300);
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-  const searchRef = useRef(null);
+  const searchRef = useRef<HTMLDivElement>(null);
   
   const handleNewPollClick = () => {
     if (!mockConnected){  // Use mockConnected instead of connected
@@ -31,8 +31,8 @@ export default function Navbar() {
 
   // Close search results when clicking outside
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (searchRef.current && !searchRef.current.contains(event.target)) {
+    function handleClickOutside(event: React.MouseEvent | MouseEvent) {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setIsSearching(false);
       }
     }
