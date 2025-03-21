@@ -1,37 +1,36 @@
-import { Disclosure, DisclosureButton, DisclosurePanel} from '@headlessui/react'
-import { MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/20/solid'
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
-import { useWallet } from '@solana/wallet-adapter-react'
-import { useWalletModal } from '@solana/wallet-adapter-react-ui'
-import { useState, useRef, useEffect } from 'react'
-import NewPollModal from '../new_poll_creation/make_new_poll_card'
-import SearchResults from './search_results'
-import Link from 'next/link'
-import { useDebounce } from 'use-debounce'
+"use client";
+
+import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
+import { MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/20/solid';
+import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { useState, useRef, useEffect } from 'react';
+import NewPollModal from '../polls/make_new_poll_card';
+import SearchResults from './search_results';
+import Link from 'next/link';
+import { useDebounce } from 'use-debounce';
 
 export default function Navbar() {
-  const {connected} = useWallet()
-  const mockConnected = true;  // Uncommented for testing
-  const {setVisible} = useWalletModal()
+  const { connected } = useWallet();
+  const { setVisible } = useWalletModal();
   const [isNewPollModalOpen, setIsNewPollModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery] = useDebounce(searchQuery, 300);
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-  
+
   const handleNewPollClick = () => {
-    if (!mockConnected){  // Use mockConnected instead of connected
+    if (!connected) {
       setVisible(true);
-    }
-    else{
+    } else {
       setIsNewPollModalOpen(true);
     }
-  }
+  };
 
-  // Close search results when clicking outside
   useEffect(() => {
-    function handleClickOutside(event: React.MouseEvent | MouseEvent) {
+    function handleClickOutside(event: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setIsSearching(false);
       }
@@ -40,7 +39,6 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Search polls when query changes
   useEffect(() => {
     async function searchPolls() {
       if (!debouncedQuery) {
@@ -67,18 +65,12 @@ export default function Navbar() {
         <div className="relative flex h-16 items-center justify-between">
           <div className="flex items-center px-2 lg:px-0">
             <div className="shrink-0">
-              
-              <a href='/' 
-                >
-                <span className="-ml-0.5 text-md font-semibold text-white ">
+              {/* ✅ Ensuring proper navigation */}
+              <Link href="/home">
+                <span className="-ml-0.5 text-md font-semibold text-white">
                   BlockVote
                 </span>
-              </a>
-              {/* <img
-                alt="Blockvote"
-                src="https://tailwindui.com/plus-assets/img/logos/mark.svg?color=indigo&shade=500"
-                className="h-8 w-auto"
-              /> */}
+              </Link>
             </div>
             <div className="hidden lg:ml-6 lg:block">
               <div className="flex items-center space-x-4">
@@ -90,14 +82,28 @@ export default function Navbar() {
                   <PlusIcon aria-hidden="true" className="-ml-0.5 h-5 w-5" />
                   New Poll
                 </DisclosureButton>
-                {mockConnected && (  // Use mockConnected instead of connected
+                <Link
+                  href="/home"
+                  className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-semibold"
+                >
+                  Home
+                </Link>
+                {(
                   <Link
-                    href="/components/post_login"
+                    href="/dashboard"
                     className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-semibold"
                   >
                     Dashboard
                   </Link>
                 )}
+
+                {/* ✅ FAQ Link */}
+                <Link
+                  href="/faq"
+                  className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-semibold"
+                >
+                  FAQ
+                </Link>
               </div>
             </div>
           </div>
@@ -125,7 +131,6 @@ export default function Navbar() {
             </div>
           </div>
           <div className="flex lg:hidden">
-            {/* Mobile menu button */}
             <DisclosureButton className="group relative inline-flex items-center justify-center rounded-md p-2 text-gray-400 hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white">
               <span className="absolute -inset-0.5" />
               <span className="sr-only">Open main menu</span>
@@ -135,24 +140,34 @@ export default function Navbar() {
           </div>
         </div>
       </div>
-
       <DisclosurePanel className="lg:hidden">
         <div className="space-y-1 px-2 pb-3 pt-2">
-          {mockConnected && (  // Use mockConnected instead of connected
+          <Link
+            href="/home"
+            className="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+          >
+            Home
+          </Link>
+
+          {connected && (
             <Link
-              href="/post_login"
+              href="/dashboard"
               className="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
             >
               Dashboard
             </Link>
           )}
+
+          <Link
+            href="/faq"
+            className="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+          >
+            FAQ
+          </Link>
         </div>
       </DisclosurePanel>
-        <NewPollModal
-        isOpen={isNewPollModalOpen}
-        setIsOpen={setIsNewPollModalOpen}
-      />
+
+      <NewPollModal isOpen={isNewPollModalOpen} setIsOpen={setIsNewPollModalOpen} />
     </Disclosure>
-    
-  )
+  );
 }

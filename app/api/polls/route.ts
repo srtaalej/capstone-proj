@@ -11,7 +11,6 @@ async function generateUniqueId(): Promise<number> {
     const randomId = Math.floor(Math.random() * (max - min + 1)) + min;
     
     try {
-      // Check if this ID already exists in the database
       const result = await pool.query(
         'SELECT id FROM polls WHERE id = $1',
         [randomId]
