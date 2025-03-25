@@ -1,6 +1,6 @@
 const navigation = {
     support: [
-      { name: 'Submit ticket', href: '#' },
+      { name: 'Submit ticket', href: '/contact-us' },
       { name: 'Guides', href: '#' },
     ],
     company: [
