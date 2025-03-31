@@ -1,214 +1,325 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { useWallet } from "@solana/wallet-adapter-react";
-import { clusterApiUrl, Connection } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
-import { useRouter } from "next/navigation";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { ClipboardDocumentIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import React, { useEffect, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
+import { PublicKey } from "@solana/web3.js";
+import {
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddress,
+} from "@solana/spl-token";
+import { Program, AnchorProvider, web3, Idl } from "@project-serum/anchor";
+import type { NextPage } from "next";
+import type { NftIdContract } from "../../../types/nft_id_contract";
+import KYCModal from "./kyc_modal";
 
-export default function Dashboard() {
-  const { publicKey } = useWallet();
-  const router = useRouter();
-  const [needsKYC, setNeedsKYC] = useState<boolean | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [kycProcessing, setKycProcessing] = useState(false);
-  const [kycResponse, setKycResponse] = useState<string | null>(null);
-  const [extractedData, setExtractedData] = useState<any>(null);
+// Dynamically import the wallet button with SSR disabled
+const WalletMultiButton = dynamic(
+  () =>
+    import("@solana/wallet-adapter-react-ui").then(
+      (mod) => mod.WalletMultiButton
+    ),
+  { ssr: false }
+);
+
+// Load your updated IDL JSON (matching only the nine accounts)
+const idl = require("../../idl/nft_id_contract.json") as NftIdContract & Idl;
+
+// Program IDs (make sure these match your deployed contract)
+const NFT_ID_PROGRAM_ID = new PublicKey(
+  "GgLTHPo25XiFsQJAkotD3KPiyMFeypJhUSx4UVcxfjcj"
+);
+const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
+  "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+);
+
+// Parameters for initiateToken
+interface InitTokenParams {
+  name: string;
+  dob: string;
+  gender: string;
+}
+
+const DashboardCard: NextPage = () => {
+  const { publicKey, connected, signTransaction, signAllTransactions } =
+    useWallet();
+  const { connection } = useConnection();
+
+  // React state
+  const [isClient, setIsClient] = useState(false);
+  const [kycVerified, setKycVerified] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [modalStep, setModalStep] = useState<
+    "ocr" | "minting" | "success" | "error"
+  >("ocr");
+  const [transactionId, setTransactionId] = useState<string>();
+  const [errorMessage, setErrorMessage] = useState<string>();
 
   useEffect(() => {
-    // If no wallet is connected, don't do any NFT checks
+    setIsClient(true);
+  }, []);
+
+  // Check NFT ownership
+  const checkNFTOwnership = useCallback(async () => {
     if (!publicKey) {
-      setLoading(false);
+      setKycVerified(false);
+      setIsLoading(false);
       return;
     }
-    const checkNFTs = async () => {
-      try {
-        const connection = new Connection(clusterApiUrl("devnet"));
-        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
-          programId: TOKEN_PROGRAM_ID,
-        });
-        let hasNFT = false;
-        tokenAccounts.value.forEach((tokenAccount) => {
-          const tokenAmount = tokenAccount.account.data.parsed.info.tokenAmount;
-          if (tokenAmount.amount === "1" && tokenAmount.decimals === 0) {
-            hasNFT = true;
-          }
-        });
-        console.log("🔍 NFT Ownership:", hasNFT);
-        // If user has an NFT, they don't need KYC
-        setNeedsKYC(!hasNFT);
-      } catch (error) {
-        console.error("Error checking NFTs:", error);
-        // If there's an error, we assume KYC is needed
-        setNeedsKYC(true);
-      } finally {
-        setLoading(false);
+    try {
+      console.log("Checking NFT ownership for wallet:", publicKey.toString());
+      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+        publicKey,
+        { programId: TOKEN_PROGRAM_ID }
+      );
+      let hasNFT = false;
+      for (const acc of tokenAccounts.value) {
+        const parsed = acc.account.data.parsed.info.tokenAmount;
+        if (parsed.amount === "1" && parsed.decimals === 0) {
+          hasNFT = true;
+          break;
+        }
       }
-    };
-    checkNFTs();
-  }, [publicKey, router]);
-
-  const handleCopyAddress = async () => {
-    if (publicKey) {
-      await navigator.clipboard.writeText(publicKey.toString());
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setKycVerified(hasNFT);
+    } catch (error) {
+      console.error("Error checking NFTs:", error);
+      setKycVerified(false);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [publicKey, connection]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setSelectedFile(event.target.files[0]);
+  useEffect(() => {
+    checkNFTOwnership();
+  }, [checkNFTOwnership]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
     }
   };
 
   const handleRemoveFile = () => {
     setSelectedFile(null);
+    const fileInput = document.querySelector(
+      'input[type="file"]'
+    ) as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = "";
+    }
+  };
+
+  const getStatusDisplay = () => {
+    if (!connected) {
+      return {
+        color: "gray",
+        text: "Not Connected",
+        description:
+          "Please connect your wallet to proceed with KYC verification.",
+      };
+    }
+    if (isLoading) {
+      return {
+        color: "blue",
+        text: "Checking Status",
+        description: "Verifying your KYC status...",
+      };
+    }
+    if (kycVerified) {
+      return {
+        color: "green",
+        text: "Verified",
+        description: "Your identity has been verified on the blockchain.",
+      };
+    }
+    return {
+      color: "yellow",
+      text: "Unverified",
+      description: "Please complete KYC verification.",
+    };
   };
 
   const handleKYC = async () => {
-    if (!selectedFile) {
-      setKycResponse("❌ Please select a file before submitting.");
+    if (!selectedFile || !publicKey || !signTransaction || !signAllTransactions)
       return;
-    }
-    setKycProcessing(true);
-    setKycResponse(null);
-    setExtractedData(null);
+
+    setShowModal(true);
+    setModalStep("ocr");
+    setErrorMessage(undefined);
+
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      const response = await fetch("http://localhost:5001/upload", {
-        method: "POST",
-        body: formData,
+      console.log("Starting KYC process...");
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      setModalStep("minting");
+
+      // Use the wallet adapter's wallet instance (non-null asserted)
+      const wallet = {
+        publicKey,
+        signTransaction,
+        signAllTransactions,
+      };
+
+      const provider = new AnchorProvider(connection, wallet, {
+        commitment: "confirmed",
+        preflightCommitment: "confirmed",
       });
-      const data = await response.json();
-      if (data.error) {
-        setKycResponse("❌ KYC submission failed. Please try again.");
-      } else {
-        setKycResponse("✅ KYC Submitted Successfully!");
-        setExtractedData(data);
-        // Mark them as verified
-        setNeedsKYC(false);
+
+      const program = new Program(idl, NFT_ID_PROGRAM_ID, provider);
+      console.log("Available program methods:", Object.keys(program.methods));
+
+      // Derive PDAs for the accounts expected by the on-chain program.
+      // - mint: derived using seed ["mint", payer]
+      const [mint] = PublicKey.findProgramAddressSync(
+        [Buffer.from("mint"), publicKey.toBuffer()],
+        NFT_ID_PROGRAM_ID
+      );
+
+      // - metadata: PDA for Metaplex metadata (seed: ["metadata", tokenMetadataProgram, mint])
+      const [metadata] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("metadata"),
+          TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+          mint.toBuffer()
+        ],
+        TOKEN_METADATA_PROGRAM_ID
+      );
+
+      // - destination: Associated Token Account for the mint & payer
+      const destination = await getAssociatedTokenAddress(
+        mint,
+        publicKey,
+        false,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+
+      console.log("Account addresses:", {
+        mint: mint.toBase58(),
+        metadata: metadata.toBase58(),
+        destination: destination.toBase58(),
+        payer: publicKey.toBase58()
+      });
+
+      // Prepare mock OCR data
+      const mockOcrData: InitTokenParams = {
+        name: "John Doe",
+        dob: "1990-01-01",
+        gender: "M"
+      };
+
+      // Call the initiateToken instruction with the 9 accounts that the contract expects.
+      const txSig = await program.methods
+        .initiateToken(mockOcrData.name, mockOcrData.dob, mockOcrData.gender)
+        .accounts({
+          metadata,
+          mint,
+          destination,
+          payer: publicKey,
+          rent: web3.SYSVAR_RENT_PUBKEY,
+          systemProgram: web3.SystemProgram.programId,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID
+        })
+        .rpc();
+
+      console.log("Transaction signature:", txSig);
+      setTransactionId(txSig);
+      setModalStep("success");
+      await checkNFTOwnership();
+    } catch (err) {
+      console.error("Transaction error:", err);
+      const error = err as { logs?: string[]; message?: string };
+      if (error.logs) {
+        console.error("Transaction logs:", error.logs);
       }
-    } catch (error) {
-      console.error("Error submitting KYC:", error);
-      setKycResponse("❌ KYC submission failed. Please try again.");
-    } finally {
-      setKycProcessing(false);
+      setModalStep("error");
+      setErrorMessage(error.message || "Failed to mint NFT");
     }
   };
 
-  // Allow user to re-upload a file even after successful KYC
-  const handleReupload = () => {
-    setNeedsKYC(true);
-    setSelectedFile(null);
-    setExtractedData(null);
-    setKycResponse(null);
-  };
+  const status = getStatusDisplay();
 
-  // 1) If wallet isn't connected, show a message with WalletMultiButton
-  if (!publicKey) {
+  if (!isClient) return null;
+
+  if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 text-gray-900 flex flex-col items-center justify-center">
-        <h1 className="text-3xl font-bold mb-4">Dashboard</h1>
-        <p className="text-lg mb-4">Please connect your wallet to view the dashboard.</p>
-        <WalletMultiButton className="px-4 py-2 bg-indigo-600 text-white rounded-md" />
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
-  // 2) Otherwise, show the KYC / Dashboard content
   return (
-    <div className="min-h-screen bg-gray-100 text-gray-900">
-      <main className="max-w-4xl mx-auto mt-10 p-6 bg-white rounded-xl shadow-lg">
-        <h1 className="text-4xl font-bold mb-6">Dashboard</h1>
+    <div className="bg-white shadow rounded-lg p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">KYC Verification</h2>
+        <WalletMultiButton />
+      </div>
 
-        <div className="p-4 border rounded-lg bg-gray-100 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Wallet Address</h2>
-            <p className="font-mono text-sm bg-gray-200 px-3 py-1 rounded-md">
-              {publicKey.toString().slice(0, 4)}...{publicKey.toString().slice(-4)}
-            </p>
-          </div>
-          <button onClick={handleCopyAddress} className="text-blue-500 hover:underline">
-            {copied ? "Copied!" : "Copy"}
-          </button>
+      {/* Status Indicator */}
+      <div className={`mb-6 p-4 rounded-lg bg-${status.color}-50 border border-${status.color}-200`}>
+        <div className="flex items-center">
+          <div className={`w-3 h-3 rounded-full bg-${status.color}-500 mr-2`} />
+          <span className={`font-semibold text-${status.color}-700`}>{status.text}</span>
         </div>
+        <p className="mt-2 text-sm text-gray-600">{status.description}</p>
+      </div>
 
-        <div className="p-4 border rounded-lg bg-gray-100 flex flex-col items-center mt-6 w-full">
-          <h2 className="text-lg font-semibold mb-2">KYC Status</h2>
-          {loading ? (
-            <p className="text-gray-500">Checking NFT ownership...</p>
-          ) : (
-            <span
-              className={`px-3 py-1 rounded-full text-white text-sm font-semibold ${
-                needsKYC ? "bg-red-500" : "bg-green-500"
-              }`}
-            >
-              {needsKYC ? "Required" : "Verified"}
-            </span>
-          )}
-
-          {/* If verified, show "Reupload" button */}
-          {!needsKYC && !loading && (
-            <button
-              onClick={handleReupload}
-              className="mt-4 px-4 py-2 bg-yellow-500 text-white font-semibold rounded-md hover:bg-yellow-600 transition"
-            >
-              Reupload KYC
-            </button>
-          )}
-
-          {/* If KYC is required, show upload UI */}
-          {needsKYC && (
-            <div className="mt-4 flex flex-col items-center w-full">
+      {connected && !kycVerified && !isLoading && (
+        <div className="space-y-6">
+          {/* File Upload */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Upload ID Document</label>
+            <div className="space-y-2">
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleFileChange}
-                className="mb-2 p-2 border rounded-md w-full"
+                className="block w-full text-sm text-gray-500
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-md file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700
+                  hover:file:bg-blue-100"
               />
-              {selectedFile ? (
-                <div className="text-sm mt-2 flex items-center">
-                  <span className="mr-2">📂 {selectedFile.name}</span>
-                  <button onClick={handleRemoveFile} className="text-red-500 hover:underline">
+              {selectedFile && (
+                <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                  <span className="text-sm text-gray-600">Selected: {selectedFile.name}</span>
+                  <button
+                    onClick={handleRemoveFile}
+                    className="text-red-500 hover:text-red-700 text-sm font-medium"
+                  >
                     Remove
                   </button>
                 </div>
-              ) : (
-                <p className="text-gray-500 text-sm">No file uploaded.</p>
               )}
-              <button
-                onClick={handleKYC}
-                disabled={kycProcessing}
-                className="mt-3 px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 transition"
-              >
-                {kycProcessing ? "Processing..." : "Submit KYC"}
-              </button>
             </div>
-          )}
+          </div>
 
-          {/* KYC Response (success or failure) */}
-          {kycResponse && (
-            <p className="mt-2 text-sm font-semibold">{kycResponse}</p>
-          )}
-
-          {/* Extracted Data Display */}
-          {extractedData && (
-            <div className="mt-4 p-4 bg-gray-200 rounded-md w-full">
-              <h3 className="text-lg font-semibold">Extracted Information:</h3>
-              <p><strong>First Name:</strong> {extractedData.first_name}</p>
-              <p><strong>Middle Name:</strong> {extractedData.middle_name}</p>
-              <p><strong>Last Name:</strong> {extractedData.last_name}</p>
-              <p><strong>DOB:</strong> {extractedData.dob}</p>
-              <p><strong>Gender:</strong> {extractedData.gender}</p>
-            </div>
-          )}
+          {/* Submit KYC */}
+          <button
+            onClick={handleKYC}
+            disabled={!selectedFile}
+            className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          >
+            Submit KYC
+          </button>
         </div>
-      </main>
+      )}
+
+      <KYCModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        modalStep={modalStep}
+        transactionId={transactionId}
+        errorMessage={errorMessage}
+      />
     </div>
   );
-}
+};
+
+export default DashboardCard
