@@ -3,6 +3,7 @@
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
 import { MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/20/solid';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useState, useRef, useEffect } from 'react';
 import NewPollModal from '../polls/make_new_poll_card';
@@ -14,7 +15,7 @@ import { Poll } from '@/app/types/poll';
 
 export default function Navbar() {
   const supabase = createClient();
-  const connected  = true //useWallet();
+  const connected  = useWallet();
   const { setVisible } = useWalletModal();
   const [isNewPollModalOpen, setIsNewPollModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,7 +43,7 @@ export default function Navbar() {
   }, []);
   useEffect(() => {
     const fetchPolls = async () => {
-      if (!debouncedQuery) {
+      if (!debouncedQuery.trim()) {
         setSearchResults([]);
         return;
       }
@@ -50,7 +51,8 @@ export default function Navbar() {
       const { data, error } = await supabase
         .from('polls')
         .select('*')
-        .eq('is_private', false);
+        .eq('is_private', false)
+        .ilike('title', `%${debouncedQuery}%`);
 
       if (error) {
         console.error('Error fetching polls:', error);
@@ -62,7 +64,7 @@ export default function Navbar() {
     };
 
     fetchPolls();
-  }, [debouncedQuery]);
+  }, [debouncedQuery, supabase]);
 
   return (
     <Disclosure as="nav" className="bg-gray-900">
