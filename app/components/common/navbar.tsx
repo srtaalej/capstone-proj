@@ -88,10 +88,10 @@ export default function Navbar() {
                   New Poll
                 </DisclosureButton>
                 <Link
-                  href="/home"
+                  href="/public_polls"
                   className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-semibold"
                 >
-                  Home
+                  Public Polls
                 </Link>
                 {(
                   <Link
