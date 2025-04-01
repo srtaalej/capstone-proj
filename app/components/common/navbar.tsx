@@ -3,21 +3,23 @@
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
 import { MagnifyingGlassIcon, PlusIcon } from '@heroicons/react/20/solid';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
-import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useState, useRef, useEffect } from 'react';
 import NewPollModal from '../polls/make_new_poll_card';
 import SearchResults from './search_results';
 import Link from 'next/link';
 import { useDebounce } from 'use-debounce';
+import { createClient } from '@/app/lib/client';
+import { Poll } from '@/app/types/poll';
 
 export default function Navbar() {
+  const supabase = createClient();
   const connected  = true //useWallet();
   const { setVisible } = useWalletModal();
   const [isNewPollModalOpen, setIsNewPollModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery] = useDebounce(searchQuery, 300);
-  const [searchResults, setSearchResults] = useState([]);
+  const [searchResults, setSearchResults] = useState<Poll[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
@@ -38,25 +40,28 @@ export default function Navbar() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
   useEffect(() => {
-    async function searchPolls() {
+    const fetchPolls = async () => {
       if (!debouncedQuery) {
         setSearchResults([]);
         return;
       }
+      setIsSearching(true);
+      const { data, error } = await supabase
+        .from('polls')
+        .select('*')
+        .eq('is_private', false);
 
-      try {
-        const response = await fetch(`/api/polls?q=${encodeURIComponent(debouncedQuery)}`);
-        const data = await response.json();
-        setSearchResults(data);
-      } catch (error) {
-        console.error('Error searching polls:', error);
-        setSearchResults([]);
+      if (error) {
+        console.error('Error fetching polls:', error);
+      } else {
+        console.log('Fetched Polls:', data); // Log the returned data to inspect its format
+        setSearchResults(data || []);
       }
-    }
+      setIsSearching(false);
+    };
 
-    searchPolls();
+    fetchPolls();
   }, [debouncedQuery]);
 
   return (

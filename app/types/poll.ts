@@ -1,7 +1,8 @@
 export interface Poll {
+  id:string
   title: string;
   description: string;
-  endDate: Date;
+  end_date: string;
   isPrivate: boolean;
   options: Option[];
   created_at: string;
