@@ -12,7 +12,7 @@ import Link from 'next/link';
 import { useDebounce } from 'use-debounce';
 
 export default function Navbar() {
-  const { connected } = useWallet();
+  const connected  = true //useWallet();
   const { setVisible } = useWalletModal();
   const [isNewPollModalOpen, setIsNewPollModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
