@@ -1,6 +1,6 @@
 import { Pool } from "pg";
 
-export const pool = new Pool({
+ const pool = new Pool({
   user: process.env.POSTGRES_USER || 'postgres',
   password: process.env.POSTGRES_PASSWORD,
   host: process.env.POSTGRES_HOST || 'localhost',
@@ -8,5 +8,4 @@ export const pool = new Pool({
   database: process.env.POSTGRES_DATABASE || 'blockvote',
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
 });
-
-export default pool; 
+export default pool;

@@ -9,13 +9,15 @@ interface SearchResultsProps {
   onClose: () => void;
 }
 
-// Helper function to format dates consistently
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleTimeString('en-US', {
     year: 'numeric',
-    month: 'short',
-    day: 'numeric'
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
   });
 };
 
@@ -28,32 +30,31 @@ export default function SearchResults({ results, isVisible, onClose }: SearchRes
         {results.map((poll) => (
           <Link
             key={poll.id}
-            href={`/polls/${poll.id}`}
-            className="block p-4 hover:bg-gray-50 rounded-lg transition-colors duration-150 ease-in-out"
-            onClick={onClose}
-          >
+            href={`/public_polls`}
+            >
+          <div>
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <h3 className="text-sm font-medium text-gray-900">{poll.name}</h3>
+                <h3 className="text-sm font-medium text-gray-900">{poll.title}</h3>
                 <p className="mt-1 text-sm text-gray-500 line-clamp-2">{poll.description}</p>
               </div>
             </div>
-            <div className="mt-2 flex items-center text-xs text-gray-500 space-x-4">
+            <div className="mt-2 flex items-center text-xs text-gray-500 sxace-x-4">
               <div className="flex items-center">
                 <CalendarIcon className="mr-1.5 h-4 w-4" />
-                <span>Ends {formatDate(poll.endDate)}</span>
+                <span>Ends {formatDate(poll.end_date)}</span>
               </div>
-              <div className="flex items-center">
-                <UserGroupIcon className="mr-1.5 h-4 w-4" />
-                <span>{poll.votes} votes</span>
-              </div>
-              <div className="flex items-center">
-                <span>{poll.options.length} options</span>
-              </div>
-            </div>
+          </div>
+          </div>
           </Link>
+        
         ))}
+        
       </div>
     </div>
   );
 } 
+
+
+
+

@@ -1,7 +1,10 @@
+'use client'
+
 import {Fragment, useState} from 'react'
-import {Dialog, DialogPanel, DialogTitle, Transition, TransitionChild} from '@headlessui/react'
+import {Dialog, DialogPanel, DialogTitle, Transition, TransitionChild, Description, Field, Label, Switch } from '@headlessui/react'
 import { XMarkIcon} from '@heroicons/react/20/solid'
 import { PollFormData } from '@/app/types/poll'
+import { createClient } from '@/app/lib/client';
 
 interface NewPollModalProps{
     isOpen: boolean;
@@ -12,42 +15,74 @@ export default function NewPollModal({isOpen, setIsOpen}: NewPollModalProps) {
     const [formData, setFormData] = useState<PollFormData>({
         title: '',
         description: '',
-        endDate: '',
-        options: ['', ''] 
+        endDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(),
+        isPrivate: false,
+        options: ['', '']
     });
+    
+    const supabase = createClient();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const response = await fetch('/api/polls', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: formData.title,
+            console.log(formData);
+            // Insert into the `polls` table without the `options` field
+            const { data: pollData, error: pollError } = await supabase
+                .from("polls")
+                .insert({
+                    title: formData.title,
                     description: formData.description,
-                    endDate: formData.endDate,
-                    options: formData.options
-                }),
-            });
-
-            if (response.ok) {
-                // Reset form
-                setFormData({
-                    title: '',
-                    description: '',
-                    endDate: '',
-                    options: ['', '']
-                });
-                setIsOpen(false);
-            } else {
-                console.error('Failed to create poll');
+                    is_private: formData.isPrivate,
+                    end_date: formData.endDate
+                })
+                .select("id");
+    
+            if (pollError) {
+                console.error("Error inserting poll data:", pollError.message);
+                return;
             }
+    
+            if (!pollData || pollData.length === 0) {
+                console.error("Poll insert did not return data");
+                return;
+            }
+    
+            // pollData now contains the poll ID, which is required for options
+            const pollId = pollData[0].id; // Assuming the response contains the 'id' field
+            
+            // Prepare options data for insertion into the `options` table
+            const optionsToInsert = formData.options.map(option => ({
+                poll_id: pollId,  // Associate option with the created poll
+                text: option
+            }));
+    
+            // Insert the options into the `options` table
+            const { error: optionsError } = await supabase
+                .from("options")
+                .insert(optionsToInsert);
+    
+            if (optionsError) {
+                console.error("Error inserting options data:", optionsError.message);
+                return;
+            }
+    
+            console.log("Poll created:", pollData);
+            
+            // Reset form data after submission
+            setFormData({
+                title: '',
+                description: '',
+                endDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(),
+                isPrivate: false,
+                options: ['', ''] // Reset the options array
+            });
+    
+            setIsOpen(false);
         } catch (error) {
-            console.error('Error creating poll:', error);
+            console.error("Error creating poll:", error);
         }
     };
+    
 
     const addOption = () => {
         setFormData(prev => ({
@@ -63,7 +98,13 @@ export default function NewPollModal({isOpen, setIsOpen}: NewPollModalProps) {
             options: prev.options.filter((_, i) => i !== index)
         }));
     };
-
+    const handleSwitchChange = (newState: boolean) => {
+        setFormData(prevData => ({
+          ...prevData,
+          isPrivate: newState, // Update isPrivate when the switch is toggled
+        }));
+      };
+      
     return (
         <Transition appear show={isOpen} as={Fragment}>
             <Dialog as="div" className="relative z-50" onClose={setIsOpen}>
@@ -204,6 +245,28 @@ export default function NewPollModal({isOpen, setIsOpen}: NewPollModalProps) {
                                                     </button>
                                                 </div>
                                             </div>
+                                            <div className='flex items-center justify-between'>
+                                            <span className="flex grow flex-col">
+                                                <span className="text-sm/6 font-medium text-white">
+                                                Make poll private
+                                                </span>
+                                                <span className="text-sm text-gray-500">
+                                                Only authorized users will be able to see this poll
+                                                </span>
+                                            </span>
+                                                <Switch
+                                                    checked={formData.isPrivate}  // Use formData.isPrivate to control the switch
+                                                    onChange={handleSwitchChange}
+                                                    className="group relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-gray-200 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 data-[checked]:bg-indigo-600"
+                                                >
+                                                    <span
+                                                    aria-hidden="true"
+                                                    className="pointer-events-none inline-block size-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out group-data-[checked]:translate-x-5"
+                                                    />
+                                                </Switch>
+
+                                            </div>
+                                            
 
                                             <div className="mt-6 flex items-center justify-end gap-x-6">
                                                 <button
