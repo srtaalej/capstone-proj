@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, ReactNode } from "react";
+import React, { useMemo, ReactNode, useState, useEffect } from "react";
 import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
@@ -14,8 +14,8 @@ interface WalletContextProps {
 }
 
 export const WalletContextProvider: React.FC<WalletContextProps> = ({ children }) => {
+  const [isClient, setIsClient] = useState(false);
   const network: WalletAdapterNetwork = WalletAdapterNetwork.Devnet;
-
   const endpoint = useMemo(() => clusterApiUrl(network), [network]);
 
   const wallets = useMemo(
@@ -26,6 +26,14 @@ export const WalletContextProvider: React.FC<WalletContextProps> = ({ children }
     ],
     []
   );
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return null;
+  }
 
   return (
     <ConnectionProvider endpoint={endpoint}>
