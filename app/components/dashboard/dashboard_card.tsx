@@ -22,10 +22,10 @@ const WalletMultiButton = dynamic(
   { ssr: false }
 );
 
-// Load your updated IDL JSON (matching only the nine accounts)
+// Load your updated IDL JSON (which matches your deployed contract's nine accounts)
 const idl = require("../../idl/nft_id_contract.json") as NftIdContract & Idl;
 
-// Program IDs (make sure these match your deployed contract)
+// Program IDs – ensure these match your deployed contract.
 const NFT_ID_PROGRAM_ID = new PublicKey(
   "GgLTHPo25XiFsQJAkotD3KPiyMFeypJhUSx4UVcxfjcj"
 );
@@ -33,7 +33,7 @@ const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
   "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 );
 
-// Parameters for initiateToken
+// Define the parameters for the minting instruction.
 interface InitTokenParams {
   name: string;
   dob: string;
@@ -45,15 +45,12 @@ const DashboardCard: NextPage = () => {
     useWallet();
   const { connection } = useConnection();
 
-  // React state
   const [isClient, setIsClient] = useState(false);
   const [kycVerified, setKycVerified] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [modalStep, setModalStep] = useState<
-    "ocr" | "minting" | "success" | "error"
-  >("ocr");
+  const [modalStep, setModalStep] = useState<"ocr" | "minting" | "success" | "error">("ocr");
   const [transactionId, setTransactionId] = useState<string>();
   const [errorMessage, setErrorMessage] = useState<string>();
 
@@ -97,19 +94,13 @@ const DashboardCard: NextPage = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-    }
+    if (file) setSelectedFile(file);
   };
 
   const handleRemoveFile = () => {
     setSelectedFile(null);
-    const fileInput = document.querySelector(
-      'input[type="file"]'
-    ) as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = "";
-    }
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
   };
 
   const getStatusDisplay = () => {
@@ -117,8 +108,7 @@ const DashboardCard: NextPage = () => {
       return {
         color: "gray",
         text: "Not Connected",
-        description:
-          "Please connect your wallet to proceed with KYC verification.",
+        description: "Please connect your wallet to proceed with KYC verification.",
       };
     }
     if (isLoading) {
@@ -143,19 +133,46 @@ const DashboardCard: NextPage = () => {
   };
 
   const handleKYC = async () => {
-    if (!selectedFile || !publicKey || !signTransaction || !signAllTransactions)
-      return;
+    if (!selectedFile || !publicKey || !signTransaction || !signAllTransactions) return;
 
     setShowModal(true);
     setModalStep("ocr");
     setErrorMessage(undefined);
 
     try {
-      console.log("Starting KYC process...");
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      console.log("Starting OCR process...");
+      
+      // Create a FormData object and append the selected file.
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      // Send the file to your Flask OCR server.
+      const ocrResponse = await fetch("http://localhost:5001/upload", {
+        method: "POST",
+        body: formData,
+      });
+      
+      if (!ocrResponse.ok) {
+        throw new Error("OCR server error");
+      }
+      
+      // Parse the OCR response.
+      const ocrData = await ocrResponse.json();
+      console.log("OCR data:", ocrData);
+      const fullName = `${ocrData.first_name}${ocrData.last_name}`.trim().slice(0, 9);
+      console.log(fullName, ocrData.dob, ocrData.gender)
+      // Build the payload using the OCR response.
+      const ocrPayload: InitTokenParams = {
+        name: fullName,
+        dob: ocrData.dob,
+        gender: ocrData.gender.slice(0,1),
+      };
+
+
+      // Proceed with minting using the OCR payload.
       setModalStep("minting");
 
-      // Use the wallet adapter's wallet instance (non-null asserted)
+      // Use the wallet adapter's wallet instance.
       const wallet = {
         publicKey,
         signTransaction,
@@ -170,14 +187,12 @@ const DashboardCard: NextPage = () => {
       const program = new Program(idl, NFT_ID_PROGRAM_ID, provider);
       console.log("Available program methods:", Object.keys(program.methods));
 
-      // Derive PDAs for the accounts expected by the on-chain program.
-      // - mint: derived using seed ["mint", payer]
+      // Derive PDAs as required.
       const [mint] = PublicKey.findProgramAddressSync(
         [Buffer.from("mint"), publicKey.toBuffer()],
         NFT_ID_PROGRAM_ID
       );
 
-      // - metadata: PDA for Metaplex metadata (seed: ["metadata", tokenMetadataProgram, mint])
       const [metadata] = PublicKey.findProgramAddressSync(
         [
           Buffer.from("metadata"),
@@ -187,7 +202,6 @@ const DashboardCard: NextPage = () => {
         TOKEN_METADATA_PROGRAM_ID
       );
 
-      // - destination: Associated Token Account for the mint & payer
       const destination = await getAssociatedTokenAddress(
         mint,
         publicKey,
@@ -203,16 +217,9 @@ const DashboardCard: NextPage = () => {
         payer: publicKey.toBase58()
       });
 
-      // Prepare mock OCR data
-      const mockOcrData: InitTokenParams = {
-        name: "John Doe",
-        dob: "1990-01-01",
-        gender: "M"
-      };
-
-      // Call the initiateToken instruction with the 9 accounts that the contract expects.
+      // Call the minting instruction with the OCR payload.
       const txSig = await program.methods
-        .initiateToken(mockOcrData.name, mockOcrData.dob, mockOcrData.gender)
+        .initiateToken(ocrPayload.name, ocrPayload.dob, ocrPayload.gender)
         .accounts({
           metadata,
           mint,
@@ -233,9 +240,7 @@ const DashboardCard: NextPage = () => {
     } catch (err) {
       console.error("Transaction error:", err);
       const error = err as { logs?: string[]; message?: string };
-      if (error.logs) {
-        console.error("Transaction logs:", error.logs);
-      }
+      if (error.logs) console.error("Transaction logs:", error.logs);
       setModalStep("error");
       setErrorMessage(error.message || "Failed to mint NFT");
     }
@@ -244,7 +249,6 @@ const DashboardCard: NextPage = () => {
   const status = getStatusDisplay();
 
   if (!isClient) return null;
-
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
@@ -322,4 +326,4 @@ const DashboardCard: NextPage = () => {
   );
 };
 
-export default DashboardCard
+export default DashboardCard;
