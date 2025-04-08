@@ -26,6 +26,7 @@
     "pino-pretty": "^13.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "resend": "^4.2.0",
     "tsconfig-paths": "^4.2.0",
     "use-debounce": "^10.0.4"
   },
