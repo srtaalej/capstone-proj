@@ -20,7 +20,7 @@ const formatDate = (dateString: string) => {
 
 export default function PollCard({ poll }: PublicPollResultsProps) {
         return (
-              <li className="col-span-1 flex flex-col divide-y divide-indigo-500 rounded-lg bg-gray-850 border border-indigo-500  text-center shadow"
+              <div className="col-span-1 flex flex-col divide-y divide-indigo-500 rounded-lg bg-gray-850 border border-indigo-500  text-center shadow"
               >
                 <div className="flex flex-1 flex-col p-8">
                   <h3 className="mt-6 text-sm font-semibold text-white">{poll.title}</h3>
@@ -48,6 +48,6 @@ export default function PollCard({ poll }: PublicPollResultsProps) {
                     ))}
                  </div>
                 </div>
-              </li>
+              </div>
     )     
 };

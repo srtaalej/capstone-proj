@@ -68,6 +68,22 @@ const PublicPollsPage = () => {
     const handleCloseModal = () => {
       setIsModalOpen(false);
       setSelectedPoll(null);
+      //update vote number on the card
+      const updatedPolls = polls.map(p => {
+        if (p.id === selectedPoll?.id) {
+            return {
+            ...p,
+            options: p.options.map((option: any) => {
+              if (option.text === selectedPoll?.options[0].text) {
+              return { ...option, vote_count: option.vote_count + 1 };
+              }
+              return option;
+            })
+            };
+        }
+        return p;
+      });
+      setPolls(updatedPolls);
     };
 
     return (

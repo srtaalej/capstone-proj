@@ -22,11 +22,10 @@ export default function VoteModal({ poll, isOpen, onClose }: VoteModalProps) {
     
     setIsSubmitting(true);
     
-    // Find the selected option
     const option = poll.options.find(opt => opt.text === selectedOption);
     
     if (option) {
-      // Update vote count in the database
+        console.log('Submitting vote for option:', option.text);
       const { error } = await supabase
         .from('options')
         .update({ vote_count: option.vote_count + 1 })
@@ -36,13 +35,13 @@ export default function VoteModal({ poll, isOpen, onClose }: VoteModalProps) {
       if (error) {
         console.error('Error submitting vote:', error);
       } else {
-        // Close modal after successful vote
         onClose();
       }
     }
     
     setIsSubmitting(false);
   };
+  //after the vote is submitted, the page has to refresh so that the new vote appears on the card
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
