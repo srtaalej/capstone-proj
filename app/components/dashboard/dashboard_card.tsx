@@ -13,27 +13,15 @@ import type { NextPage } from "next";
 import type { NftIdContract } from "../../../types/nft_id_contract";
 import KYCModal from "./kyc_modal";
 
-// Dynamically import the wallet button with SSR disabled
 const WalletMultiButton = dynamic(
-  () =>
-    import("@solana/wallet-adapter-react-ui").then(
-      (mod) => mod.WalletMultiButton
-    ),
+  () => import("@solana/wallet-adapter-react-ui").then((mod) => mod.WalletMultiButton),
   { ssr: false }
 );
 
-// Load your updated IDL JSON (which matches your deployed contract's nine accounts)
 const idl = require("../../idl/nft_id_contract.json") as NftIdContract & Idl;
+const NFT_ID_PROGRAM_ID = new PublicKey("GgLTHPo25XiFsQJAkotD3KPiyMFeypJhUSx4UVcxfjcj");
+const TOKEN_METADATA_PROGRAM_ID = new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
 
-// Program IDs – ensure these match your deployed contract.
-const NFT_ID_PROGRAM_ID = new PublicKey(
-  "GgLTHPo25XiFsQJAkotD3KPiyMFeypJhUSx4UVcxfjcj"
-);
-const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
-  "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
-);
-
-// Define the parameters for the minting instruction.
 interface InitTokenParams {
   name: string;
   dob: string;
@@ -41,8 +29,7 @@ interface InitTokenParams {
 }
 
 const DashboardCard: NextPage = () => {
-  const { publicKey, connected, signTransaction, signAllTransactions } =
-    useWallet();
+  const { publicKey, connected, signTransaction, signAllTransactions } = useWallet();
   const { connection } = useConnection();
 
   const [isClient, setIsClient] = useState(false);
@@ -50,38 +37,25 @@ const DashboardCard: NextPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [modalStep, setModalStep] = useState<"ocr" | "minting" | "success" | "error">("ocr");
+  const [modalStep, setModalStep] = useState<"ocr" | "confirm" | "minting" | "success" | "error">("ocr");
   const [transactionId, setTransactionId] = useState<string>();
   const [errorMessage, setErrorMessage] = useState<string>();
+  const [ocrData, setOcrData] = useState<InitTokenParams | null>(null);
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  useEffect(() => setIsClient(true), []);
 
-  // Check NFT ownership
   const checkNFTOwnership = useCallback(async () => {
-    if (!publicKey) {
-      setKycVerified(false);
-      setIsLoading(false);
-      return;
-    }
+    if (!publicKey) return setIsLoading(false);
     try {
-      console.log("Checking NFT ownership for wallet:", publicKey.toString());
-      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-        publicKey,
-        { programId: TOKEN_PROGRAM_ID }
+      const tokenAccounts = await connection.getParsedTokenAccountsByOwner(publicKey, {
+        programId: TOKEN_PROGRAM_ID,
+      });
+      const hasNFT = tokenAccounts.value.some(
+        (acc) => acc.account.data.parsed.info.tokenAmount.amount === "1" &&
+                 acc.account.data.parsed.info.tokenAmount.decimals === 0
       );
-      let hasNFT = false;
-      for (const acc of tokenAccounts.value) {
-        const parsed = acc.account.data.parsed.info.tokenAmount;
-        if (parsed.amount === "1" && parsed.decimals === 0) {
-          hasNFT = true;
-          break;
-        }
-      }
       setKycVerified(hasNFT);
-    } catch (error) {
-      console.error("Error checking NFTs:", error);
+    } catch {
       setKycVerified(false);
     } finally {
       setIsLoading(false);
@@ -103,35 +77,6 @@ const DashboardCard: NextPage = () => {
     if (fileInput) fileInput.value = "";
   };
 
-  const getStatusDisplay = () => {
-    if (!connected) {
-      return {
-        color: "gray",
-        text: "Not Connected",
-        description: "Please connect your wallet to proceed with KYC verification.",
-      };
-    }
-    if (isLoading) {
-      return {
-        color: "blue",
-        text: "Checking Status",
-        description: "Verifying your KYC status...",
-      };
-    }
-    if (kycVerified) {
-      return {
-        color: "green",
-        text: "Verified",
-        description: "Your identity has been verified on the blockchain.",
-      };
-    }
-    return {
-      color: "yellow",
-      text: "Unverified",
-      description: "Please complete KYC verification.",
-    };
-  };
-
   const handleKYC = async () => {
     if (!selectedFile || !publicKey || !signTransaction || !signAllTransactions) return;
 
@@ -140,65 +85,54 @@ const DashboardCard: NextPage = () => {
     setErrorMessage(undefined);
 
     try {
-      console.log("Starting OCR process...");
-      
-      // Create a FormData object and append the selected file.
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      // Send the file to your Flask OCR server.
       const ocrResponse = await fetch("http://localhost:5001/upload", {
         method: "POST",
         body: formData,
       });
-      
-      if (!ocrResponse.ok) {
-        throw new Error("OCR server error");
-      }
-      
-      // Parse the OCR response.
-      const ocrData = await ocrResponse.json();
-      console.log("OCR data:", ocrData);
-      const fullName = `${ocrData.first_name}${ocrData.last_name}`.trim().slice(0, 9);
-      console.log(fullName, ocrData.dob, ocrData.gender)
-      // Build the payload using the OCR response.
-      const ocrPayload: InitTokenParams = {
-        name: fullName,
-        dob: ocrData.dob,
-        gender: ocrData.gender.slice(0,1),
-      };
 
+      if (!ocrResponse.ok) throw new Error("OCR server error");
 
-      // Proceed with minting using the OCR payload.
+      const ocrRaw = await ocrResponse.json();
+      const rawName = `${ocrRaw.first_name}${ocrRaw.last_name}`.trim();
+      const truncated = rawName.length > 9 ? rawName.slice(0, 9) : rawName;
+
+      setOcrData({
+      name: truncated,
+      dob: ocrRaw.dob,
+      gender: ocrRaw.gender.slice(0, 1),
+  });
+
+      setModalStep("confirm");
+    } catch (err) {
+      setModalStep("error");
+      setErrorMessage((err as Error).message || "Failed to parse ID document");
+    }
+  };
+
+  const handleConfirmKYC = async () => {
+    if (!ocrData || !publicKey || !signTransaction || !signAllTransactions) return;
+
+    try {
       setModalStep("minting");
 
-      // Use the wallet adapter's wallet instance.
-      const wallet = {
-        publicKey,
-        signTransaction,
-        signAllTransactions,
-      };
-
+      const wallet = { publicKey, signTransaction, signAllTransactions };
       const provider = new AnchorProvider(connection, wallet, {
         commitment: "confirmed",
         preflightCommitment: "confirmed",
       });
 
       const program = new Program(idl, NFT_ID_PROGRAM_ID, provider);
-      console.log("Available program methods:", Object.keys(program.methods));
 
-      // Derive PDAs as required.
       const [mint] = PublicKey.findProgramAddressSync(
         [Buffer.from("mint"), publicKey.toBuffer()],
         NFT_ID_PROGRAM_ID
       );
 
       const [metadata] = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from("metadata"),
-          TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-          mint.toBuffer()
-        ],
+        [Buffer.from("metadata"), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.toBuffer()],
         TOKEN_METADATA_PROGRAM_ID
       );
 
@@ -210,16 +144,8 @@ const DashboardCard: NextPage = () => {
         ASSOCIATED_TOKEN_PROGRAM_ID
       );
 
-      console.log("Account addresses:", {
-        mint: mint.toBase58(),
-        metadata: metadata.toBase58(),
-        destination: destination.toBase58(),
-        payer: publicKey.toBase58()
-      });
-
-      // Call the minting instruction with the OCR payload.
       const txSig = await program.methods
-        .initiateToken(ocrPayload.name, ocrPayload.dob, ocrPayload.gender)
+        .initiateToken(ocrData.name, ocrData.dob, ocrData.gender)
         .accounts({
           metadata,
           mint,
@@ -229,33 +155,35 @@ const DashboardCard: NextPage = () => {
           systemProgram: web3.SystemProgram.programId,
           tokenProgram: TOKEN_PROGRAM_ID,
           associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-          tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID
+          tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
         })
         .rpc();
 
-      console.log("Transaction signature:", txSig);
       setTransactionId(txSig);
       setModalStep("success");
       await checkNFTOwnership();
     } catch (err) {
-      console.error("Transaction error:", err);
-      const error = err as { logs?: string[]; message?: string };
-      if (error.logs) console.error("Transaction logs:", error.logs);
       setModalStep("error");
-      setErrorMessage(error.message || "Failed to mint NFT");
+      setErrorMessage((err as Error).message || "Minting failed");
     }
+  };
+
+  const getStatusDisplay = () => {
+    if (!connected) {
+      return { color: "gray", text: "Not Connected", description: "Please connect your wallet." };
+    }
+    if (isLoading) {
+      return { color: "blue", text: "Checking Status", description: "Verifying KYC status..." };
+    }
+    if (kycVerified) {
+      return { color: "green", text: "Verified", description: "KYC NFT is already minted." };
+    }
+    return { color: "yellow", text: "Unverified", description: "Upload ID to begin verification." };
   };
 
   const status = getStatusDisplay();
 
   if (!isClient) return null;
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="bg-white shadow rounded-lg p-6">
@@ -264,7 +192,6 @@ const DashboardCard: NextPage = () => {
         <WalletMultiButton />
       </div>
 
-      {/* Status Indicator */}
       <div className={`mb-6 p-4 rounded-lg bg-${status.color}-50 border border-${status.color}-200`}>
         <div className="flex items-center">
           <div className={`w-3 h-3 rounded-full bg-${status.color}-500 mr-2`} />
@@ -275,7 +202,6 @@ const DashboardCard: NextPage = () => {
 
       {connected && !kycVerified && !isLoading && (
         <div className="space-y-6">
-          {/* File Upload */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Upload ID Document</label>
             <div className="space-y-2">
@@ -293,10 +219,7 @@ const DashboardCard: NextPage = () => {
               {selectedFile && (
                 <div className="flex items-center justify-between bg-gray-50 p-2 rounded">
                   <span className="text-sm text-gray-600">Selected: {selectedFile.name}</span>
-                  <button
-                    onClick={handleRemoveFile}
-                    className="text-red-500 hover:text-red-700 text-sm font-medium"
-                  >
+                  <button onClick={handleRemoveFile} className="text-red-500 hover:text-red-700 text-sm font-medium">
                     Remove
                   </button>
                 </div>
@@ -304,7 +227,6 @@ const DashboardCard: NextPage = () => {
             </div>
           </div>
 
-          {/* Submit KYC */}
           <button
             onClick={handleKYC}
             disabled={!selectedFile}
@@ -321,6 +243,9 @@ const DashboardCard: NextPage = () => {
         modalStep={modalStep}
         transactionId={transactionId}
         errorMessage={errorMessage}
+        ocrData={ocrData ?? undefined}
+        setOcrData={(data) => setOcrData(data)}
+        onConfirm={handleConfirmKYC}
       />
     </div>
   );
