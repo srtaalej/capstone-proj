@@ -12,6 +12,10 @@ import { Program, AnchorProvider, web3, Idl } from "@project-serum/anchor";
 import type { NextPage } from "next";
 import type { NftIdContract } from "../../../types/nft_id_contract";
 import KYCModal from "./kyc_modal";
+import { createClient } from "../../lib/client";
+import Link from "next/link";
+
+const supabase = createClient();
 
 const WalletMultiButton = dynamic(
   () => import("@solana/wallet-adapter-react-ui").then((mod) => mod.WalletMultiButton),
@@ -41,6 +45,7 @@ const DashboardCard: NextPage = () => {
   const [transactionId, setTransactionId] = useState<string>();
   const [errorMessage, setErrorMessage] = useState<string>();
   const [ocrData, setOcrData] = useState<InitTokenParams | null>(null);
+  const [originalOcrData, setOriginalOcrData] = useState<InitTokenParams | null>(null);
 
   useEffect(() => setIsClient(true), []);
 
@@ -99,12 +104,14 @@ const DashboardCard: NextPage = () => {
       const rawName = `${ocrRaw.first_name}${ocrRaw.last_name}`.trim();
       const truncated = rawName.length > 9 ? rawName.slice(0, 9) : rawName;
 
-      setOcrData({
-      name: truncated,
-      dob: ocrRaw.dob,
-      gender: ocrRaw.gender.slice(0, 1),
-  });
+      const extracted: InitTokenParams = {
+        name: truncated,
+        dob: ocrRaw.dob,
+        gender: ocrRaw.gender.slice(0, 1),
+      };
 
+      setOcrData(extracted);
+      setOriginalOcrData(extracted);
       setModalStep("confirm");
     } catch (err) {
       setModalStep("error");
@@ -113,8 +120,58 @@ const DashboardCard: NextPage = () => {
   };
 
   const handleConfirmKYC = async () => {
-    if (!ocrData || !publicKey || !signTransaction || !signAllTransactions) return;
+    if (!ocrData || !originalOcrData || !publicKey || !signTransaction || !signAllTransactions || !selectedFile) return;
 
+    const isEdited =
+      ocrData.name !== originalOcrData.name ||
+      ocrData.dob !== originalOcrData.dob ||
+      ocrData.gender !== originalOcrData.gender;
+
+    if (isEdited) {
+      try {
+        const filename = `kyc-${publicKey.toBase58()}-${Date.now()}.png`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("kyc-images")
+          .upload(filename, selectedFile);
+
+        if (uploadError) {
+          console.error("Storage upload error:", uploadError);
+          throw new Error(`Storage upload failed: ${uploadError.message}`);
+        }
+
+        const { data: urlData } = supabase
+          .storage
+          .from("kyc-images")
+          .getPublicUrl(uploadData.path);
+
+        const publicUrl = urlData.publicUrl;
+
+        const { error: insertError } = await supabase.from("kyc_submissions").insert({
+          wallet: publicKey.toBase58(),
+          name: ocrData.name,
+          dob: ocrData.dob,
+          gender: ocrData.gender,
+          image_url: publicUrl,
+          status: "pending",
+        });
+
+        if (insertError) {
+          console.error("Database insert error:", insertError);
+          throw new Error(`Database insert failed: ${insertError.message}`);
+        }
+
+        setModalStep("success");
+        return;
+      } catch (err) {
+        console.error("Manual KYC submission error:", err);
+        setModalStep("error");
+        setErrorMessage(err instanceof Error ? err.message : "Manual KYC submission failed.");
+        return;
+      }
+    }
+
+    // Standard minting
     try {
       setModalStep("minting");
 
@@ -125,17 +182,14 @@ const DashboardCard: NextPage = () => {
       });
 
       const program = new Program(idl, NFT_ID_PROGRAM_ID, provider);
-
       const [mint] = PublicKey.findProgramAddressSync(
         [Buffer.from("mint"), publicKey.toBuffer()],
         NFT_ID_PROGRAM_ID
       );
-
       const [metadata] = PublicKey.findProgramAddressSync(
         [Buffer.from("metadata"), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.toBuffer()],
         TOKEN_METADATA_PROGRAM_ID
       );
-
       const destination = await getAssociatedTokenAddress(
         mint,
         publicKey,
@@ -163,21 +217,16 @@ const DashboardCard: NextPage = () => {
       setModalStep("success");
       await checkNFTOwnership();
     } catch (err) {
+      console.error("Minting error:", err);
       setModalStep("error");
-      setErrorMessage((err as Error).message || "Minting failed");
+      setErrorMessage(err instanceof Error ? err.message : "Minting failed");
     }
   };
 
   const getStatusDisplay = () => {
-    if (!connected) {
-      return { color: "gray", text: "Not Connected", description: "Please connect your wallet." };
-    }
-    if (isLoading) {
-      return { color: "blue", text: "Checking Status", description: "Verifying KYC status..." };
-    }
-    if (kycVerified) {
-      return { color: "green", text: "Verified", description: "KYC NFT is already minted." };
-    }
+    if (!connected) return { color: "gray", text: "Not Connected", description: "Please connect your wallet." };
+    if (isLoading) return { color: "blue", text: "Checking Status", description: "Verifying KYC status..." };
+    if (kycVerified) return { color: "green", text: "Verified", description: "KYC NFT is already minted." };
     return { color: "yellow", text: "Unverified", description: "Upload ID to begin verification." };
   };
 
