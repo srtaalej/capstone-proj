@@ -2,35 +2,31 @@
 
 import { useEffect, useState } from 'react'
 import PollCard from '../components/polls/poll_card';
-import { useDebounce } from 'use-debounce';
 import { createClient } from '@/app/lib/client';
 import { Poll } from '@/app/types/poll';
 import VoteModal from '../components/polls/vote_modal';
 import { useWallet } from '@solana/wallet-adapter-react';
 
 const PublicPollsPage = () => {
-    const connected  = useWallet();
-    const [polls, setPolls] = useState<any[]>([]);
+    const { publicKey, connected } = useWallet();
+    const [polls, setPolls] = useState<Poll[]>([]);
     const supabase = createClient();
-    const [searchQuery, setSearchQuery] = useState('');
-    const [debouncedQuery] = useDebounce(searchQuery, 300);
-    const [searchResults, setSearchResults] = useState<Poll[]>([]);
-    const [isSearching, setIsSearching] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [pollVotes, setPollVotes] = useState<Record<string, Record<string, number>>>({});
 
-    // Fetch all public polls (is_private = false)
     useEffect(() => {
       const fetchPolls = async () => {
-        setIsSearching(true);
+        setIsLoading(true);
         const { data, error } = await supabase
           .from('polls')
           .select(`
             id,
-            title, 
-            description, 
-            end_date, 
-            is_private, 
+            title,
+            description,
+            end_date,
+            is_private,
             created_at,
             options (
               text,
@@ -41,68 +37,97 @@ const PublicPollsPage = () => {
           .eq('is_private', false)
           .neq('title', 'test')
           .order('created_at', { ascending: false });
-  
+
         if (error) {
           console.error('Error fetching polls:', error);
         } else {
-          console.log('Fetched Polls:', data);
           setPolls(data || []);
+           const initialVotes: Record<string, Record<string, number>> = {};
+           (data || []).forEach(poll => {
+             initialVotes[poll.id] = {};
+             poll.options.forEach(option => {
+               initialVotes[poll.id][option.text] = option.vote_count;
+             });
+           });
+           setPollVotes(initialVotes);
         }
-        setIsSearching(false);
+        setIsLoading(false);
       };
-  
-      fetchPolls();
-    }, []);
 
-    // Handle poll selection
+      fetchPolls();
+    }, [supabase]);
+
     const handlePollClick = (poll: Poll) => {
-    if (!connected) {
-      setIsModalOpen(false);
-    } else {
+      if (!connected) {
+        console.log("Connect wallet to vote");
+        return;
+      }
       setSelectedPoll(poll);
       setIsModalOpen(true);
-    }
     };
 
-    // Close modal
+    const handleVoteSubmitted = (pollId: string, optionText: string) => {
+         setPollVotes(prevVotes => {
+            const newVotes = { ...prevVotes };
+            if (newVotes[pollId]) {
+            newVotes[pollId][optionText] = (newVotes[pollId][optionText] || 0) + 1;
+            }
+            return newVotes;
+        });
+
+        setPolls(prevPolls =>
+        prevPolls.map(p => {
+            if (p.id === pollId) {
+            return {
+                ...p,
+                options: p.options.map(opt => ({
+                ...opt,
+                vote_count: pollVotes[pollId]?.[opt.text] ?? opt.vote_count,
+                })),
+            };
+            }
+            return p;
+        }),
+        );
+
+        setIsModalOpen(false);
+        setSelectedPoll(null);
+    }
+
     const handleCloseModal = () => {
       setIsModalOpen(false);
       setSelectedPoll(null);
-      //update vote number on the card
-      const updatedPolls = polls.map(p => {
-        if (p.id === selectedPoll?.id) {
-            return {
-            ...p,
-            options: p.options.map((option: any) => {
-              if (option.text === selectedPoll?.options[0].text) {
-              return { ...option, vote_count: option.vote_count + 1 };
-              }
-              return option;
-            })
-            };
-        }
-        return p;
-      });
-      setPolls(updatedPolls);
     };
 
     return (
-      <div className="space-y-6 p-10 bg-gray-900">
+      <div className="min-h-screen space-y-6 p-4 sm:p-6 md:p-8 lg:p-10 bg-gray-900">
         <h2 className="text-2xl font-semibold text-white">Public Polls</h2>
-        <ul role="list" className="grid grid-cols-2 gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-          {selectedPoll && (
-              <VoteModal
-                poll={selectedPoll}
-                isOpen={isModalOpen}
-                onClose={handleCloseModal}
-              />
-            )}
-          {polls.map((poll: Poll) => (
-            <li key={poll.id} onClick={() => handlePollClick(poll)} className="cursor-pointer">
-              <PollCard poll={poll} />
-            </li>
-          ))}
-        </ul>
+
+        {isLoading && (
+            <div className="text-center text-gray-400 py-10">Loading polls...</div>
+        )}
+
+        {!isLoading && polls.length === 0 && (
+             <div className="text-center text-gray-400 py-10">No public polls found.</div>
+        )}
+
+        {!isLoading && polls.length > 0 && (
+            <ul role="list" className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {selectedPoll && (
+                    <VoteModal
+                        poll={selectedPoll}
+                        isOpen={isModalOpen}
+                        onClose={handleCloseModal}
+                        onVoteSuccess={handleVoteSubmitted}
+                    />
+                )}
+                {polls.map((poll: Poll) => (
+                    <li key={poll.id} onClick={() => handlePollClick(poll)} className="cursor-pointer">
+                    <PollCard poll={poll} currentVotes={pollVotes[poll.id]} />
+                    </li>
+                ))}
+            </ul>
+        )}
       </div>
     );
 };

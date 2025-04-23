@@ -149,12 +149,6 @@ export default function Navbar() {
       </div>
       <DisclosurePanel className="lg:hidden">
         <div className="space-y-1 px-2 pb-3 pt-2">
-          <Link
-            href="/home"
-            className="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
-          >
-            Home
-          </Link>
 
           {connected && (
             <Link
@@ -164,6 +158,13 @@ export default function Navbar() {
               Dashboard
             </Link>
           )}
+
+            <Link
+            href="/public_polls"
+            className="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+          >
+            Public Polls
+          </Link>
 
           <Link
             href="/faq"
