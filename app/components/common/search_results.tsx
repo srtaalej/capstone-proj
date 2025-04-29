@@ -1,60 +1,77 @@
 import React from 'react';
 import Link from 'next/link';
-import { CalendarIcon, UserGroupIcon } from '@heroicons/react/20/solid';
+import { CalendarIcon, ArrowPathIcon } from '@heroicons/react/20/solid'; 
 import { Poll } from '@/app/types/poll';
 
 interface SearchResultsProps {
   results: Poll[];
-  isVisible: boolean;
-  onClose: () => void;
+  isLoading: boolean; 
+  onResultClick: () => void; 
 }
 
-const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleTimeString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  });
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return 'N/A';
+  try {
+    
+    return new Date(dateString).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
+  } catch (e) {
+    console.error("Error formatting date:", e);
+    return 'Invalid Date';
+  }
 };
 
-export default function SearchResults({ results, isVisible, onClose }: SearchResultsProps) {
-  if (!isVisible || results.length === 0) return null;
+export default function SearchResults({ results, isLoading, onResultClick }: SearchResultsProps) {
+  
 
   return (
-    <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-lg max-h-96 overflow-y-auto z-50">
-      <div className="p-2">
-        {results.map((poll) => (
-          <Link
-            key={poll.id}
-            href={`/public_polls`}
-            >
-          <div>
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <h3 className="text-sm font-medium text-gray-900">{poll.title}</h3>
-                <p className="mt-1 text-sm text-gray-500 line-clamp-2">{poll.description}</p>
-              </div>
-            </div>
-            <div className="mt-2 flex items-center text-xs text-gray-500 sxace-x-4">
-              <div className="flex items-center">
-                <CalendarIcon className="mr-1.5 h-4 w-4" />
-                <span>Ends {formatDate(poll.end_date)}</span>
-              </div>
+    
+    <div className="overflow-hidden rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
+       <div className="max-h-96 overflow-y-auto p-2"> 
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex justify-center items-center p-4 text-gray-500">
+            <ArrowPathIcon className="h-5 w-5 animate-spin mr-2" />
+            <span>Loading...</span>
           </div>
+        )}
+
+        {/* No Results State */}
+        {!isLoading && results.length === 0 && (
+          <div className="p-4 text-center text-sm text-gray-500">
+            No polls found.
           </div>
-          </Link>
-        
-        ))}
-        
+        )}
+
+        {/* Results List */}
+        {!isLoading && results.length > 0 && (
+          <ul role="list" className="divide-y divide-gray-100">
+            {results.map((poll) => (
+              <li key={poll.id} className="block hover:bg-gray-50">
+                <Link
+                  href={`/public_polls`}
+                  onClick={onResultClick}
+                  className="block p-3"
+                >
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-900 truncate">{poll.title}</h3>
+                    {poll.description && (
+                         <p className="mt-1 text-sm text-gray-500 line-clamp-1">{poll.description}</p>
+                    )}
+                    <div className="mt-2 flex items-center text-xs text-gray-500">
+                      <CalendarIcon className="mr-1.5 h-3 w-3 flex-shrink-0" aria-hidden="true" />
+                      <span>Ends {formatDate(poll.end_date)}</span>
+                    </div>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
-} 
-
-
-
-
+}
