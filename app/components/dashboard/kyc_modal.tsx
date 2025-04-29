@@ -11,6 +11,7 @@ interface KYCModalProps {
   ocrData?: { name: string; dob: string; gender: string };
   setOcrData?: (data: { name: string; dob: string; gender: string }) => void;
   onConfirm?: () => void;
+  successMode?: "minted" | "submitted"; // <- new optional prop
 }
 
 export default function KYCModal({
@@ -22,6 +23,7 @@ export default function KYCModal({
   ocrData,
   setOcrData,
   onConfirm,
+  successMode = "minted", // default to minted
 }: KYCModalProps) {
   if (!isOpen) return null;
 
@@ -75,23 +77,42 @@ export default function KYCModal({
         </div>
       )}
 
-      {modalStep === "success" && (
-        <div className="flex flex-col items-center justify-center space-y-4">
-          <div className="rounded-full h-12 w-12 bg-green-600 flex items-center justify-center">
-            <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+{modalStep === "success" && (
+  <div className="flex flex-col items-center justify-center space-y-4">
+    {successMode === "minted" ? (
+      <div className="rounded-full h-12 w-12 bg-green-600 flex items-center justify-center">
+        <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+    ) : (
+      <div className="rounded-full h-12 w-12 bg-yellow-500 flex items-center justify-center">
+        <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3" />
+        </svg>
+      </div>
+    )}
+
+    {successMode === "minted" ? (
+      <>
+        <h3 className="text-lg font-semibold">KYC Verified!</h3>
+        <p className="text-sm">Your digital identity has been created successfully.</p>
+        {transactionId && (
+          <div className="mt-2 text-sm">
+            <p className="text-gray-400">Transaction ID:</p>
+            <p className="font-mono break-all">{transactionId}</p>
           </div>
-          <h3 className="text-lg font-semibold">KYC Verified!</h3>
-          <p className="text-sm">Your digital identity has been created successfully.</p>
-          {transactionId && (
-            <div className="mt-2 text-sm">
-              <p className="text-gray-400">Transaction ID:</p>
-              <p className="font-mono break-all">{transactionId}</p>
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </>
+    ) : (
+      <>
+        <h3 className="text-lg font-semibold">KYC Sent for Manual Check</h3>
+        <p className="text-sm">Your information has been submitted and is awaiting manual review.</p>
+      </>
+    )}
+  </div>
+)}
+
 
       {modalStep === "error" && (
         <div className="flex flex-col items-center justify-center space-y-4">
@@ -107,3 +128,4 @@ export default function KYCModal({
     </div>
   );
 }
+
