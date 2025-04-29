@@ -1,6 +1,10 @@
 import React from 'react';
 import Link from 'next/link';
-import { Poll } from '@/app/types/poll';
+import { Poll, Option } from '@/app/types/poll';
+import { useEffect, useState } from 'react';
+import { createClient } from '@/app/lib/client';
+
+const supabase = createClient();
 
 interface PublicPollResultsProps {
   poll: Poll
@@ -18,7 +22,42 @@ const formatDate = (dateString: string) => {
   });
 };
 
+
+
 export default function PollCard({ poll }: PublicPollResultsProps) {
+    const [options, setOptions] = useState(poll.options); // Local state for options
+
+  useEffect(() => {
+    // Subscribe to changes in the `options` table for this poll
+    const channel = supabase
+      .channel(`poll-${poll.id}`) // Unique channel for this poll
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE', // Listen for updates
+          schema: 'public',
+          table: 'options',
+          filter: `poll_id=eq.${poll.id}`, // Only listen for changes to this poll's options
+        },
+        (payload) => {
+          console.log('Realtime update received:', payload);
+          const updatedOption = payload.new as Option;
+
+          // Update the specific option in the local state
+          setOptions((prevOptions) =>
+            prevOptions.map((option) =>
+              option.poll_id === updatedOption.poll_id ? updatedOption : option
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [poll.id]);
         return (
               <div className="col-span-1 flex flex-col divide-y divide-indigo-500 rounded-lg bg-gray-850 border border-indigo-500  text-center shadow"
               >
