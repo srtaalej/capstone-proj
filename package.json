@@ -31,6 +31,7 @@
     "react-redux": "^9.2.0",
     "react-toastify": "^11.0.5",
     "resend": "^4.2.0",
+    "tailwind": "^4.0.0",
     "tsconfig-paths": "^4.2.0",
     "use-debounce": "^10.0.4"
   },
