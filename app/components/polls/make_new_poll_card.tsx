@@ -3,8 +3,15 @@
 import {Fragment, useState} from 'react'
 import {Dialog, DialogPanel, DialogTitle, Transition, TransitionChild, Description, Field, Label, Switch } from '@headlessui/react'
 import { XMarkIcon} from '@heroicons/react/20/solid'
-import { PollFormData } from '@/app/types/poll'
 import { createClient } from '@/app/lib/client';
+
+import { useWallet } from '@solana/wallet-adapter-react'
+import { NextPage } from 'next'
+import { BN } from '@coral-xyz/anchor'
+import { useEffect, useMemo} from 'react'
+import { toast } from 'react-toastify'
+import { createPoll, getCounter, getProvider } from '../../services/blockchain.service'
+import { title } from 'process'
 
 interface NewPollModalProps{
     isOpen: boolean;
@@ -12,14 +19,34 @@ interface NewPollModalProps{
 }
 
 export default function NewPollModal({isOpen, setIsOpen}: NewPollModalProps) {
-    const [formData, setFormData] = useState<PollFormData>({
-        title: '',
-        description: '',
-        endDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(),
-        isPrivate: false,
-        options: ['', '']
-    });
-    
+    const { publicKey, sendTransaction, signTransaction } = useWallet()
+    const [submitting, setSubmitting] = useState<boolean>(false)
+    const [nextCount, setNextCount] = useState<BN>(new BN(0))
+    const [isInitialized, setIsInitialized] = useState<boolean>(false)
+  
+    const program = useMemo(
+      () => getProvider(publicKey, signTransaction, sendTransaction),
+      [publicKey, signTransaction, sendTransaction]
+    )
+  
+    const [formData, setFormData] = useState({
+      // title: '',
+      description: '',
+      startDate: '',
+      endDate: '',
+      // isPrivate: false,
+    })
+  
+    const fetchCounter = async () => {
+      if (!program) return
+      const count = await getCounter(program!)
+      setNextCount(count.add(new BN(1)))
+      setIsInitialized(count.gte(new BN(0)))
+    }
+  
+    useEffect(() => {
+      fetchCounter()
+    }, [program, submitting])
     const supabase = createClient();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -30,9 +57,9 @@ export default function NewPollModal({isOpen, setIsOpen}: NewPollModalProps) {
             const { data: pollData, error: pollError } = await supabase
                 .from("polls")
                 .insert({
-                    title: formData.title,
+                    // title: formData.title,
                     description: formData.description,
-                    is_private: formData.isPrivate,
+                    // is_private: formData.isPrivate,
                     end_date: formData.endDate
                 })
                 .select("id");
@@ -70,10 +97,8 @@ export default function NewPollModal({isOpen, setIsOpen}: NewPollModalProps) {
             
             // Reset form data after submission
             setFormData({
-                title: '',
                 description: '',
                 endDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(),
-                isPrivate: false,
                 options: ['', ''] // Reset the options array
             });
     

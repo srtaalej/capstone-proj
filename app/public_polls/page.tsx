@@ -3,9 +3,26 @@
 import { useEffect, useState } from 'react'
 import PollCard from '../components/polls/poll_card';
 import { createClient } from '@/app/lib/client';
-import { Poll } from '@/app/types/poll';
 import VoteModal from '../components/polls/vote_modal';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { Poll } from '@/app/utils/interfaces';
+
+/* eslint-disable  @typescript-eslint/no-unused-vars */
+
+
+// import { FaRegEdit } from 'react-icons/fa'
+// import CandidateList from '@/app/components/CandidateList'
+// import RegCandidate from '@/app/components/RegCandidate'
+// import { RootState } from '@/app/utils/interfaces'
+// import { useDispatch, useSelector } from 'react-redux'
+// import { globalActions } from '@/app/store/globalSlices'
+// import { useParams } from 'next/navigation'
+// import {
+//   fetchAllCandidates,
+//   fetchPollDetails,
+//   getReadOnlyProvider,
+// } from '@/app/services/blockchain.service'
+
 
 const PublicPollsPage = () => {
     const { publicKey, connected } = useWallet();
@@ -80,7 +97,7 @@ const PublicPollsPage = () => {
             if (p.id === pollId) {
             return {
                 ...p,
-                options: p.options.map(opt => ({
+                options: p.candidates.map(opt => ({
                 ...opt,
                 vote_count: pollVotes[pollId]?.[opt.text] ?? opt.vote_count,
                 })),

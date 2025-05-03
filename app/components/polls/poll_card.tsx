@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Poll } from '@/app/types/poll';
+import { Poll } from '@/app/utils/interfaces';
 
 interface PublicPollResultsProps {
   poll: Poll
