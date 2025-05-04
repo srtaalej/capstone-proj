@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import PollCard from '../components/polls/poll_card';
 import { createClient } from '@/app/lib/client';
 import { Poll } from '@/app/types/poll';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation'; // Changed from next/router
 
 const PublicPollsPage = () => {
   const [polls, setPolls] = useState<any[]>([]);
