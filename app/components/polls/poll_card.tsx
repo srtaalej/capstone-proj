@@ -1,6 +1,10 @@
 import React from 'react';
 import Link from 'next/link';
-import { Poll } from '@/app/types/poll';
+import { Poll, Option } from '@/app/types/poll';
+import { useEffect, useState } from 'react';
+import { createClient } from '@/app/lib/client';
+
+const supabase = createClient();
 
 interface PublicPollResultsProps {
   poll: Poll
@@ -18,9 +22,44 @@ const formatDate = (dateString: string) => {
   });
 };
 
+
+
 export default function PollCard({ poll }: PublicPollResultsProps) {
+    const [options, setOptions] = useState(poll.options); // Local state for options
+
+  useEffect(() => {
+    // Subscribe to changes in the `options` table for this poll
+    const channel = supabase
+      .channel(`poll-${poll.id}`) // Unique channel for this poll
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE', // Listen for updates
+          schema: 'public',
+          table: 'options',
+          filter: `poll_id=eq.${poll.id}`, // Only listen for changes to this poll's options
+        },
+        (payload) => {
+          console.log('Realtime update received:', payload);
+          const updatedOption = payload.new as Option;
+
+          // Update the specific option in the local state
+          setOptions((prevOptions) =>
+            prevOptions.map((option) =>
+              option.poll_id === updatedOption.poll_id ? updatedOption : option
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [poll.id]);
         return (
-              <div className="col-span-1 flex flex-col divide-y divide-indigo-500 rounded-lg bg-gray-850 border border-indigo-500  text-center shadow"
+              <div className="col-span-1 flex flex-col divide-y rounded-lg text-center shadow bg-gray-800"
               >
                 <div className="flex flex-1 flex-col p-8">
                   <h3 className="mt-6 text-sm font-semibold text-white">{poll.title}</h3>
@@ -29,24 +68,17 @@ export default function PollCard({ poll }: PublicPollResultsProps) {
                     <dd className="text-sm text-gray-400">{poll.description}</dd>
                     <dt className="sr-only">End Date</dt>
                     <dd className="mt-3">
-                      <span className="inline-flex items-center rounded-full bg-green-60 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-500/20">
-                        {formatDate(poll.end_date)}
-                      </span>
+                        <span
+                            className={`inline-flex items-center rounded-full bg-gray-600 px-2 py-1 text-xs font-medium ring-1 ring-inset ${
+                                new Date(poll.end_date) < new Date()
+                                ? 'text-red-500'
+                                : 'text-indigo-500'
+                            }`}
+                            >
+                            {new Date(poll.end_date) < new Date() ? 'Ended' : formatDate(poll.end_date)}
+                        </span>
                     </dd>
                   </dl>
-                </div>
-                <div>
-                <div className="-mt-px flex divide-x divide-indigo-500">
-                    {poll.options.map((option) => (
-                        <div key={option.text} className="flex w-0 flex-1">
-                        <span
-                            className="p-2 relative -mr-px inline-flex w-0 flex-1 items-center justify-center gap-x-3 rounded-bl-lg border border-transparent py-4 text-xs font-semibold text-white"
-                        >
-                            {option.text}: {option.vote_count}
-                        </span>
-                        </div>
-                    ))}
-                 </div>
                 </div>
               </div>
     )     
