@@ -56,7 +56,6 @@ export default function HeroSection() {
                   Get Started
                 </WalletMultiButton>
               )}
-              {/* Learn More Section Restored */}
               <a
                 href="/faq"
                 className="text-sm/6 font-semibold text-gray-300 hover:text-white"

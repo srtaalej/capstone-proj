@@ -137,6 +137,12 @@ export default function Navbar() {
                     >
                       FAQ
                     </Link>
+                    <Link
+                      href="/getting-started"
+                      className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-semibold"
+                    >
+                      Guide
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -229,6 +235,13 @@ export default function Navbar() {
                 onClick={close} 
               >
                 FAQ
+              </Link>
+              <Link
+                href="/getting-started"
+                className="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
+                onClick={close} 
+              >
+                Guide
               </Link>
             </div>
           </DisclosurePanel>
