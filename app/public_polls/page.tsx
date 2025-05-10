@@ -40,16 +40,17 @@ const PublicPollsPage = () => {
     fetchPolls();
   }, []);
 
-  const handlePollClick = (id: string) => {
-    router.push(`/polls/${id}`);
-  };
+  // const handlePollClick = (id: string) => {
+  //   router.push(`/polls/${id}`);
+  // };
+  //onClick={() => handlePollClick(poll.id)} 
 
   return (
     <div className="space-y-6 p-10 bg-gray-900">
       <h2 className="text-2xl font-semibold text-white">Public Polls</h2>
       <ul role="list" className="grid grid-cols-2 gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
         {polls.map((poll: Poll) => (
-          <li key={poll.id} onClick={() => handlePollClick(poll.id)} className="cursor-pointer">
+          <li key={poll.id} className="cursor-pointer">
             <PollCard poll={poll} />
           </li>
         ))}
