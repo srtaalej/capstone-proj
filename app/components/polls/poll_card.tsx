@@ -58,28 +58,28 @@ export default function PollCard({ poll }: PublicPollResultsProps) {
       supabase.removeChannel(channel);
     };
   }, [poll.id]);
+  {new Date(poll.end_date).toLocaleString()}
         return (
-              <div className="col-span-1 flex flex-col divide-y rounded-lg text-center shadow bg-gray-800"
-              >
-                <div className="flex flex-1 flex-col p-8">
-                  <h3 className="mt-6 text-sm font-semibold text-white">{poll.title}</h3>
-                  <dl className="mt-1 flex grow flex-col justify-between">
-                    <dt className="sr-only">Title</dt>
-                    <dd className="text-sm text-gray-400">{poll.description}</dd>
-                    <dt className="sr-only">End Date</dt>
-                    <dd className="mt-3">
-                        <span
-                            className={`inline-flex items-center rounded-full bg-gray-600 px-2 py-1 text-xs font-medium ring-1 ring-inset ${
-                                new Date(poll.end_date) < new Date()
-                                ? 'text-red-500'
-                                : 'text-indigo-500'
-                            }`}
-                            >
-                            {new Date(poll.end_date) < new Date() ? 'Ended' : formatDate(poll.end_date)}
-                        </span>
-                    </dd>
-                  </dl>
+            <div className="col-span-1 flex flex-col bg-gray-800 p-6 hover:bg-gray-700/70 transition-colors rounded-2xl">
+            <div className="flex flex-1 flex-col">
+              <h3 className="text-xl font-bold text-white mb-2">{poll.title}</h3>
+              <div className="flex flex-col flex-grow">
+                <p className="text-md text-gray-300 mb-4">{poll.description}</p>
+                <div className="mt-auto flex items-center">
+                  <div className="flex items-center text-sm text-gray-400">
+                    <span className={`mr-1 ${
+                        new Date(poll.end_date) < new Date() 
+                            ? 'text-red-500' 
+                            : 'text-green-500'
+                        }`}>
+                      {new Date(poll.end_date) < new Date() 
+                        ? 'Ended' 
+                        : `Ends ${new Date(poll.end_date).toLocaleString()}`}
+                    </span>
+                  </div>
                 </div>
               </div>
+            </div>
+          </div>
     )     
 };
