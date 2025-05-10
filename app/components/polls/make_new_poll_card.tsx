@@ -15,8 +15,8 @@ export default function NewPollModal({isOpen, setIsOpen}: NewPollModalProps) {
     const [formData, setFormData] = useState<PollFormData>({
         title: '',
         description: '',
-        endDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(),
-        isPrivate: false,
+        end_date: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(),
+        is_private: false,
         options: ['', '']
     });
     
@@ -32,8 +32,8 @@ export default function NewPollModal({isOpen, setIsOpen}: NewPollModalProps) {
                 .insert({
                     title: formData.title,
                     description: formData.description,
-                    is_private: formData.isPrivate,
-                    end_date: formData.endDate
+                    is_private: formData.is_private,
+                    end_date: formData.end_date
                 })
                 .select("id");
     
@@ -72,8 +72,8 @@ export default function NewPollModal({isOpen, setIsOpen}: NewPollModalProps) {
             setFormData({
                 title: '',
                 description: '',
-                endDate: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(),
-                isPrivate: false,
+                end_date: new Date(new Date().setDate(new Date().getDate() + 7)).toISOString(),
+                is_private: false,
                 options: ['', ''] // Reset the options array
             });
     
@@ -199,8 +199,8 @@ export default function NewPollModal({isOpen, setIsOpen}: NewPollModalProps) {
                                                             id="endDate"
                                                             required
                                                             className="block w-full rounded-md bg-white/5 px-3 py-1.5 text-white outline outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6"
-                                                            value={formData.endDate}
-                                                            onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                                                            value={formData.end_date}
+                                                            onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
                                                         />
                                                     </div>
                                                 </div>
@@ -255,7 +255,7 @@ export default function NewPollModal({isOpen, setIsOpen}: NewPollModalProps) {
                                                 </span>
                                             </span>
                                                 <Switch
-                                                    checked={formData.isPrivate}  // Use formData.isPrivate to control the switch
+                                                    checked={formData.is_private}
                                                     onChange={handleSwitchChange}
                                                     className="group relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-gray-200 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 data-[checked]:bg-indigo-600"
                                                 >

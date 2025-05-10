@@ -3,7 +3,7 @@ export interface Poll {
   title: string;
   description: string;
   end_date: string;
-  isPrivate: boolean;
+  is_private: boolean;
   options: Option[];
   created_at: string;
 }
@@ -18,7 +18,7 @@ export interface Option {
 export interface PollFormData {
   title: string;
   description: string;
-  endDate: string;
-  isPrivate: boolean;
+  end_date: string;
+  is_private: boolean;
   options: string[];
 } 

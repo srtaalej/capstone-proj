@@ -10,8 +10,9 @@ const PollDetailsPage = () => {
   const id = params.id as string;
   const [poll, setPoll] = useState<Poll | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isVoting, setIsVoting] = useState(false);
-  const wallet = useWallet();
+  const [votingOptions, setVotingOptions] = useState<Record<string, boolean>>({});
+  const connected = true;
+  //useWallet();
   
   useEffect(() => {
     const fetchPoll = async () => {
@@ -41,7 +42,7 @@ const PollDetailsPage = () => {
       } else if (data) {
         const formattedPoll: Poll = {
           ...data,
-          isPrivate: data.is_private,
+          is_private: data.is_private,
           options: data.options,
         };
         setPoll(formattedPoll);
@@ -54,30 +55,31 @@ const PollDetailsPage = () => {
   }, [id]);
   
   const handleVote = async (optionText: string) => {
-    if (!wallet.connected || !poll) return;
+    if (!connected || !poll) return;
     
-    setIsVoting(true);
+    setVotingOptions(prev => ({ ...prev, [optionText]: true }));
     const supabase = createClient();
     
     const { error } = await supabase.rpc('increment_vote_count', {
-      poll_id_input: poll.id,
-      option_text_input: optionText,
-    });
+        poll_id_input: poll.id,
+        option_text_input: optionText
+      });
+      
     
     if (error) {
-      console.error('Error voting:', error);
-    } else {
-      const updatedOptions = poll.options.map(option =>
-        option.text === optionText
-          ? { ...option, vote_count: option.vote_count + 1 }
-          : option
-      );
-      
-      setPoll({ ...poll, options: updatedOptions });
+        console.error('Error voting:', error);
+      } else {
+        const updatedOptions = poll.options.map(option =>
+          option.text === optionText
+            ? { ...option, vote_count: option.vote_count + 1 }
+            : option
+        );
+        
+        setPoll({ ...poll, options: updatedOptions });
     }
     
-    setIsVoting(false);
-  };
+    setVotingOptions(prev => ({ ...prev, [optionText]: false }));
+    };
   
   const getTotalVotes = () => {
     if (!poll) return 0;
@@ -147,12 +149,12 @@ const PollDetailsPage = () => {
                   ></div>
                 </div>
                 <button
-                  onClick={() => handleVote(option.text)}
-                  disabled={isVoting || !wallet.connected}
-                  className="mt-3 w-full p-2 rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
-                >
-                  {isVoting ? 'Voting...' : 'Vote'}
-                </button>
+                    onClick={() => handleVote(option.text)}
+                    disabled={votingOptions[option.text] || !connected}
+                    className="mt-3 w-full p-2 rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
+                    >
+                    {votingOptions[option.text] ? 'Voting...' : 'Vote'}
+                    </button>
               </div>
             ))}
           </div>
@@ -161,7 +163,7 @@ const PollDetailsPage = () => {
             Poll ends: {new Date(poll.end_date).toLocaleString()}
           </p>
           
-          {!wallet.connected && (
+          {!connected && (
             <div className="mt-4 p-4 bg-amber-800/30 border border-amber-700 rounded-lg">
               <p className="text-amber-200">Connect your wallet to vote in this poll</p>
             </div>

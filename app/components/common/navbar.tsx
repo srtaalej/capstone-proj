@@ -3,7 +3,7 @@
 import { Disclosure, DisclosureButton, DisclosurePanel, Transition } from '@headlessui/react';
 import { MagnifyingGlassIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/20/solid';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
-import { useWallet } from '@solana/wallet-adapter-react';
+//import { useWallet } from '@solana/wallet-adapter-react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { useState, useRef, useEffect, Fragment } from 'react';
 import NewPollModal from '../polls/make_new_poll_card';
@@ -15,7 +15,8 @@ import { Poll } from '@/app/types/poll';
 
 export default function Navbar() {
   const supabase = createClient();
-  const { connected } = useWallet();
+  const connected = true;
+  //useWallet();
   const { setVisible } = useWalletModal();
   const [isNewPollModalOpen, setIsNewPollModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -66,6 +67,7 @@ export default function Navbar() {
             is_private,
             created_at,
             options (
+              poll_id,
               text,
               vote_count
             )
@@ -79,7 +81,7 @@ export default function Navbar() {
         setSearchResults([]); // Clear results on error
       } else {
         // console.log('Fetched Polls:', data);
-        setSearchResults(data || []);
+        setSearchResults(data);
       }
 
       setIsSearchLoading(false); // Set loading false after fetch is done
@@ -210,7 +212,9 @@ export default function Navbar() {
               <Link
                 href="/public_polls"
                 className="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
-                onClick={close} 
+                onClick={(e) => {
+                  close();
+                }}
               >
                 Public Polls
               </Link>
@@ -218,7 +222,9 @@ export default function Navbar() {
                 <Link
                   href="/dashboard"
                   className="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
-                  onClick={close} 
+                  onClick={(e) => {
+                    close();
+                  }}
                 >
                   Dashboard
                 </Link>
@@ -226,7 +232,9 @@ export default function Navbar() {
               <Link
                 href="/faq"
                 className="block rounded-md px-3 py-2 text-base font-medium text-gray-300 hover:bg-gray-700 hover:text-white"
-                onClick={close} 
+                onClick={(e) => {
+                  close();
+                }}
               >
                 FAQ
               </Link>
