@@ -72,7 +72,9 @@ export default function PollCard({ poll }: PublicPollResultsProps) {
                       {showNotification && (
                         <div className="fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg flex items-center z-50">
                             <BsClipboard2Check/>
-                            Link copied to clipboard!
+                            <p className='px-1'>
+                              Link copied to clipboard!
+                            </p>
                         </div>
                       )}
                     <MenuItem>

@@ -5,6 +5,9 @@ import { Poll, Option } from '@/app/types/poll';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useParams } from 'next/navigation';
 import { MdArrowBackIos } from "react-icons/md";
+import { BsThreeDotsVertical, BsClipboard2, BsClipboard2Check } from "react-icons/bs";
+import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
+
 const PollDetailsPage = () => {
   const params = useParams();
   const id = params.id as string;
@@ -12,6 +15,7 @@ const PollDetailsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [votingOptions, setVotingOptions] = useState<Record<string, boolean>>({});
   const connected = true;
+  const [showNotification, setShowNotification] = useState(false);
   //useWallet();
   
   useEffect(() => {
@@ -114,12 +118,64 @@ const PollDetailsPage = () => {
       <div className="max-w-4xl mx-auto">
       
         <div className="bg-gray-800 p-8 rounded-2xl shadow-lg mb-6">
-        <div className="mb-4 w-20"> 
+        <div className="mb-4 flex justify-between items-center"> 
             <a href='/public_polls'
                 className="flex items-center px-4 py-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-indigo-400 hover:text-indigo-300 transition-colors">
                 <MdArrowBackIos/>
                 Back
             </a>
+            <div className="relative inline-block text-left">
+              <Menu>
+                <MenuButton onClick={(e) => {
+                    e.stopPropagation();
+                  }}>
+                  <BsThreeDotsVertical color='white'/>
+                </MenuButton>
+
+                <MenuItems
+                  transition
+                  className="absolute right-0 z-10 mt-2 origin-top-right rounded-md bg-gray-500 shadow-lg ring-1 ring-black/5 transition focus:outline-none data-[closed]:scale-95 data-[closed]:transform data-[closed]:opacity-0 data-[enter]:duration-100 data-[leave]:duration-75 data-[enter]:ease-out data-[leave]:ease-in">
+                  
+                  <div className="py-1">
+                      {showNotification && (
+                        <div className="fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg flex items-center z-50">
+                            <BsClipboard2Check/>
+                            <p className='px-1'>
+                              Link copied to clipboard!
+                            </p>
+                        </div>
+                      )}
+                    <MenuItem>
+                      
+                      <div className='flex items-center justify-between p-2 text-sm text-white'>
+                        <BsClipboard2/>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                      
+                            const baseUrl = window.location.origin;
+                            const pollUrl = `${baseUrl}/polls/${poll.id}`;
+                            
+                            navigator.clipboard.writeText(pollUrl)
+                              .then(() => {
+                                close();
+                                setShowNotification(true);
+                                setTimeout(() => setShowNotification(false), 2000);
+                              })
+                              .catch(err => {
+                                console.error('Failed to copy: ', err);
+                              });
+                          }}
+                          className='px-2'
+                        >
+                          Share
+                        </button>
+                      </div>
+                    </MenuItem>
+                  </div>
+                </MenuItems>
+              </Menu>
+            </div>
         </div>
           <h1 className="text-3xl font-bold text-white mb-4">{poll.title}</h1>
           <p className="text-gray-400 mb-8">{poll.description}</p>
