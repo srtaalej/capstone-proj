@@ -52,7 +52,7 @@ export default function SearchResults({ results, isLoading, onResultClick }: Sea
             {results.map((poll) => (
               <li key={poll.id} className="block hover:bg-gray-50">
                 <Link
-                  href={`/public_polls`}
+                  href={`/polls/${poll.id}`}
                   onClick={onResultClick}
                   className="block p-3"
                 >
