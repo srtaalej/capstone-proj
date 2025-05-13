@@ -1,13 +1,11 @@
 "use client";
 
-
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "../lib/client";
 import { useWallet } from "@solana/wallet-adapter-react";
-
+import { CheckCircleIcon, XCircleIcon, RefreshCwIcon } from "lucide-react";
 
 const supabase = createClient();
-
 
 interface KycSubmission {
   id: number;
@@ -20,18 +18,15 @@ interface KycSubmission {
   submitted_at: string;
 }
 
-
 export default function AdminPage() {
   const { publicKey } = useWallet();
-
-
   const [submissions, setSubmissions] = useState<KycSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeImage, setActiveImage] = useState<string | null>(null);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-
+  const [activeSubmission, setActiveSubmission] = useState<KycSubmission | null>(null);
+  const [zoom, setZoom] = useState(false);
 
   const fetchSubmissions = useCallback(async () => {
     try {
@@ -43,17 +38,14 @@ export default function AdminPage() {
         .eq("status", "pending")
         .order("submitted_at", { ascending: false });
 
-
       if (error) throw error;
       setSubmissions(data || []);
     } catch (err) {
-      console.error("Error fetching submissions:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch submissions");
     } finally {
       setLoading(false);
     }
   }, []);
-
 
   const checkAdminAccess = useCallback(async () => {
     if (!publicKey) return;
@@ -63,21 +55,17 @@ export default function AdminPage() {
       .eq("wallet", publicKey.toBase58())
       .single();
 
-
     setIsAdmin(!!data && !error);
     setCheckingAdmin(false);
   }, [publicKey]);
-
 
   useEffect(() => {
     if (publicKey) checkAdminAccess();
   }, [publicKey, checkAdminAccess]);
 
-
   useEffect(() => {
     if (!isAdmin) return;
     fetchSubmissions();
-
 
     const channel = supabase
       .channel("kyc_submissions_changes")
@@ -86,159 +74,161 @@ export default function AdminPage() {
       )
       .subscribe();
 
-
     return () => {
       supabase.removeChannel(channel);
     };
   }, [isAdmin, fetchSubmissions]);
 
-
   const handleApprove = async (submission: KycSubmission) => {
-    try {
-      const { error } = await supabase
-        .from("kyc_submissions")
-        .update({ status: "approved" })
-        .eq("id", submission.id);
-
-
-      if (error) throw error;
+    const { error } = await supabase
+      .from("kyc_submissions")
+      .update({ status: "approved" })
+      .eq("id", submission.id);
+    if (!error) {
       setSubmissions(submissions.filter((s) => s.id !== submission.id));
-    } catch (err) {
-      console.error("Approve failed:", err);
+      setActiveSubmission(null);
     }
   };
-
 
   const handleReject = async (submission: KycSubmission) => {
-    try {
-      const { error } = await supabase
-        .from("kyc_submissions")
-        .update({ status: "rejected" })
-        .eq("id", submission.id);
-
-
-      if (error) throw error;
+    const { error } = await supabase
+      .from("kyc_submissions")
+      .update({ status: "rejected" })
+      .eq("id", submission.id);
+    if (!error) {
       setSubmissions(submissions.filter((s) => s.id !== submission.id));
-    } catch (err) {
-      console.error("Reject failed:", err);
+      setActiveSubmission(null);
     }
   };
 
+  const Wrapper = ({ children }: { children: React.ReactNode }) => (
+    <div className="bg-gradient-to-br from-gray-900 via-gray-950 to-black min-h-screen text-white px-6 py-12 sm:px-8 lg:px-16">
+      <div className="max-w-5xl mx-auto w-full">{children}</div>
+    </div>
+  );
 
-  if (checkingAdmin) {
+  if (checkingAdmin)
     return (
-      <div className="bg-gray-900 min-h-screen text-white p-6 flex items-center justify-center">
-        <p className="text-lg">Checking access...</p>
-      </div>
+      <Wrapper>
+        <p className="text-xl animate-pulse">Checking access...</p>
+      </Wrapper>
     );
-  }
-
-
-  if (!isAdmin) {
+  if (!isAdmin)
     return (
-      <div className="bg-gray-900 min-h-screen text-white p-6 flex items-center justify-center">
-        <p className="text-lg text-red-500 font-semibold">🚫 Access denied: Admins only.</p>
-      </div>
+      <Wrapper>
+        <p className="text-xl text-red-500 font-bold text-center">Access denied: Admins only.</p>
+      </Wrapper>
     );
-  }
-
-
-  if (loading) {
+  if (loading)
     return (
-      <div className="bg-gray-900 min-h-screen text-white p-6 flex justify-center items-center">
-        <div className="flex items-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-          <span className="ml-2">Loading submissions...</span>
+      <Wrapper>
+        <div className="flex items-center justify-center gap-2 animate-pulse">
+          <RefreshCwIcon className="animate-spin" /> Loading submissions...
         </div>
-      </div>
+      </Wrapper>
     );
-  }
-
-
-  if (error) {
+  if (error)
     return (
-      <div className="bg-gray-900 min-h-screen text-white p-6">
-        <div className="bg-red-500 bg-opacity-10 border border-red-400 text-red-300 px-4 py-3 rounded">
-          <p>Error: {error}</p>
+      <Wrapper>
+        <div className="bg-red-800/20 text-red-300 border border-red-500 p-4 rounded">
+          Error: {error}
         </div>
-      </div>
+      </Wrapper>
     );
-  }
-
 
   return (
-    <div className="bg-gray-900 min-h-screen text-white p-6 space-y-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">KYC Admin Review</h1>
-        <button
-          onClick={fetchSubmissions}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Refresh
-        </button>
+    <Wrapper>
+      <div className="text-center mb-10">
+        <h1 className="text-5xl font-bold tracking-tight">Pending KYC Submissions</h1>
+        <p className="mt-4 text-lg text-gray-400 max-w-xl mx-auto">
+          Select a wallet from the list to review and take action.
+        </p>
       </div>
 
-
-      {submissions.length === 0 ? (
-        <p className="text-gray-400 text-center">No pending submissions.</p>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {submissions.map((sub) => (
-            <div
+      <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+        <ul className="divide-y divide-gray-700">
+          {submissions.map((sub, index) => (
+            <li
               key={sub.id}
-              className="border border-gray-700 rounded-lg p-4 bg-gray-800 shadow space-y-2 text-sm"
+              className="flex items-center justify-between px-6 py-5 hover:bg-gray-700 transition-colors cursor-pointer"
+              onClick={() => {
+                setZoom(false);
+                setActiveSubmission(sub);
+              }}
             >
-              <button onClick={() => setActiveImage(sub.image_url)} className="focus:outline-none">
-                <img
-                  src={sub.image_url}
-                  alt="ID Upload"
-                  className="w-full h-40 object-contain rounded bg-black"
-                />
-              </button>
-              <div className="space-y-1">
-                <p><strong>Name:</strong> {sub.name}</p>
-                <p><strong>DOB:</strong> {sub.dob}</p>
-                <p><strong>Gender:</strong> {sub.gender}</p>
-                <p><strong>Wallet:</strong> {sub.wallet}</p>
-                <p><strong>Submitted:</strong> {new Date(sub.submitted_at).toLocaleString()}</p>
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-gray-400 font-mono w-6 text-right">#{index + 1}</div>
+                <div className="text-sm text-gray-300 break-all">{sub.wallet}</div>
               </div>
-              <div className="flex space-x-4 pt-2">
+              <div className="text-xs text-gray-500 whitespace-nowrap">
+                {new Date(sub.submitted_at).toLocaleString()}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {activeSubmission && (
+        <>
+          <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-6">
+            <div className="bg-gray-900 rounded-xl shadow-2xl border border-gray-700 p-6 max-w-xl w-full relative min-h-[480px]">
+              <button
+                onClick={() => setActiveSubmission(null)}
+                className="absolute top-3 right-3 text-white bg-gray-700 hover:bg-gray-600 rounded-full p-2"
+              >
+                ✕
+              </button>
+
+              <div
+                className="relative cursor-zoom-in mt-10"
+                onClick={() => setZoom(true)}
+              >
+                <img
+                  src={activeSubmission.image_url}
+                  alt="ID Document"
+                  className="w-full h-56 object-contain rounded-lg bg-black mb-4"
+                />
+              </div>
+
+              <div className="space-y-2 text-sm text-gray-300">
+                <p><strong>Name:</strong> {activeSubmission.name}</p>
+                <p><strong>DOB:</strong> {activeSubmission.dob}</p>
+                <p><strong>Gender:</strong> {activeSubmission.gender}</p>
+                <p className="break-all"><strong>Wallet:</strong> {activeSubmission.wallet}</p>
+                <p><strong>Submitted:</strong> {new Date(activeSubmission.submitted_at).toLocaleString()}</p>
+              </div>
+
+              <div className="flex justify-between pt-6">
                 <button
-                  onClick={() => handleApprove(sub)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                  onClick={() => handleApprove(activeSubmission)}
+                  className="flex items-center gap-2 px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white text-sm"
                 >
-                  Approve
+                  <CheckCircleIcon className="w-4 h-4" /> Approve
                 </button>
                 <button
-                  onClick={() => handleReject(sub)}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+                  onClick={() => handleReject(activeSubmission)}
+                  className="flex items-center gap-2 px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white text-sm"
                 >
-                  Reject
+                  <XCircleIcon className="w-4 h-4" /> Reject
                 </button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
-
-
-      {activeImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-          <div className="relative">
-            <img
-              src={activeImage}
-              alt="Full View"
-              className="max-w-full max-h-[90vh] rounded"
-            />
-            <button
-              onClick={() => setActiveImage(null)}
-              className="absolute top-2 right-2 text-white bg-gray-800 hover:bg-gray-700 rounded-full p-2"
-            >
-              ✕
-            </button>
           </div>
-        </div>
+
+          {zoom && (
+            <div
+              className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4"
+              onClick={() => setZoom(false)}
+            >
+              <img
+                src={activeSubmission.image_url}
+                alt="Zoomed ID"
+                className="max-w-full max-h-[90vh] rounded-lg border border-gray-700"
+              />
+            </div>
+          )}
+        </>
       )}
-    </div>
+    </Wrapper>
   );
 }
