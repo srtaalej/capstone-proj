@@ -6,9 +6,9 @@ import {
   fetchPollDetails,
   fetchAllCandidates,
 } from '../../services/blockchain.service'
-import { RootState } from '@/app/utils/interfaces'
+import { RootState } from '../../utils/interfaces'
 import { useParams } from 'next/navigation'
-import RegCandidate from '@/app/components/RegCandidate'
+import RegCandidate from '../../components/RegCandidate'
 import { FaRegEdit } from 'react-icons/fa'
 import { useDispatch, useSelector } from 'react-redux'
 import { globalActions } from '@/app/store/globalSlices'

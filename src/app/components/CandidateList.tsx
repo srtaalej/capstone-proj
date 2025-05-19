@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useEffect, useMemo, useState } from 'react'
 import { Candidate } from '../utils/interfaces'
 import { useWallet } from '@solana/wallet-adapter-react'
