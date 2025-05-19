@@ -126,7 +126,7 @@ export default function Page() {
                       {new Date(poll.end).toLocaleString()}
                     </p>
                     <p>
-                      <span className="font-semibold">Candidates:</span>{' '}
+                      <span className="font-semibold">Options:</span>{' '}
                       {poll.candidates}
                     </p>
                   </div>

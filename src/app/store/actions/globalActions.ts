@@ -11,4 +11,7 @@ export const globalActions = {
   setRegModal: (state: GlobalState, action: PayloadAction<string>) => {
     state.regModal = action.payload
   },
+  setKycStatus: (state: GlobalState, action: PayloadAction<'unknown' | 'verified' | 'unverified' | 'checking'>) => {
+    state.kycStatus = action.payload;
+  },
 }

@@ -21,6 +21,7 @@ export interface GlobalState {
   candidates: Candidate[]
   voters: any[]
   regModal: string
+  kycStatus?: 'unknown' | 'verified' | 'unverified' | 'checking'
 }
 
 export interface RootState {

@@ -75,7 +75,7 @@ const RegCandidate = ({
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="flex flex-row justify-between items-center">
             <p className="block text-sm font-semibold text-gray-700">
-              Candidate Name
+              Option Name
             </p>
             <button
               type="button"
@@ -107,7 +107,7 @@ const RegCandidate = ({
               className="bg-black text-white font-bold py-3 px-6 rounded-lg
               hover:bg-gray-900 transition duration-200 w-full disabled:bg-opacity-70"
             >
-              Register
+              Submit
             </button>
           </div>
         </form>

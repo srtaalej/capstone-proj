@@ -5,4 +5,5 @@ export const globalStates: GlobalState = {
   poll: null,
   voters: [],
   regModal: 'scale-0',
+  kycStatus: 'unknown',
 }

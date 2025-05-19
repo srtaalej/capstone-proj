@@ -9,6 +9,8 @@ import { useState, useRef, useEffect, Fragment } from 'react';
 import Link from 'next/link';
 import { useDebounce } from 'use-debounce';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/app/utils/interfaces';
 
 export default function Navbar() {
   const { connected } = useWallet();
@@ -18,6 +20,7 @@ export default function Navbar() {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const kycStatus = useSelector((state: RootState) => state.globalStates.kycStatus || 'unknown');
 
   useEffect(() => {
     setIsMounted(true);
@@ -78,6 +81,33 @@ export default function Navbar() {
               </div>
 
               <div className="flex items-center">
+                {/* KYC Status Indicator */}
+                {isMounted && (
+                  <div className="flex items-center mr-3">
+                    <div
+                      className={`w-4 h-4 rounded-full mr-2 border-2 border-gray-700 flex items-center justify-center cursor-default`}
+                      style={{
+                        backgroundColor:
+                          kycStatus === 'verified' ? '#22c55e' :
+                          kycStatus === 'unverified' ? '#ef4444' :
+                          kycStatus === 'checking' ? '#facc15' :
+                          '#6b7280',
+                      }}
+                      title={`KYC Status: ${
+                        kycStatus === 'verified' ? 'Verified' :
+                        kycStatus === 'unverified' ? 'Unverified' :
+                        kycStatus === 'checking' ? 'Checking' :
+                        'Unknown'
+                      }`}
+                    />
+                    <span className="text-sm text-gray-300">
+                      {kycStatus === 'verified' ? 'KYC Verified' :
+                       kycStatus === 'unverified' ? 'KYC Required' :
+                       kycStatus === 'checking' ? 'Checking KYC...' :
+                       'KYC Status'}
+                    </span>
+                  </div>
+                )}
                 {isMounted && (
                   <WalletMultiButton className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 px-4 rounded-md" />
                 )}

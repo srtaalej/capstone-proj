@@ -7,6 +7,7 @@ import ReduxProvider from './components/providers/ReduxProvider'
 import { WalletContextProvider } from "./components/context/wallet_provider";
 import Navbar from "./components/common/navbar";
 import "@solana/wallet-adapter-react-ui/styles.css";
+import KycStatusProvider from './components/providers/KycStatusProvider';
 
 export default function RootLayout({
   children,
@@ -21,10 +22,12 @@ export default function RootLayout({
             <ReduxProvider>
               <WalletContextProvider>
                 <AppWalletProvider>
-                  <Navbar />
-                  <main className="max-w-6xl mx-auto min-h-screen">
-                    {children}
-                  </main>
+                  <KycStatusProvider>
+                    <Navbar />
+                    <main className="max-w-6xl mx-auto min-h-screen">
+                      {children}
+                    </main>
+                  </KycStatusProvider>
                   <ToastContainer
                     position="bottom-center"
                     autoClose={5000}
