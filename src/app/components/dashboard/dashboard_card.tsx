@@ -14,7 +14,6 @@ import type { NftIdContract } from "../../../types/nft_id_contract";
 import KYCModal from "./kyc_modal";
 import { createClient } from "@/lib/client";
 
-
 const WalletMultiButton = dynamic(
   () => import("@solana/wallet-adapter-react-ui").then((m) => m.WalletMultiButton),
   { ssr: false }
@@ -39,7 +38,6 @@ const DashboardCard: NextPage = () => {
   const [transactionId, setTransactionId] = useState<string>();
   const [errorMessage, setErrorMessage] = useState<string>();
   const [submissionStatus, setSubmissionStatus] = useState<null | "pending" | "approved" | "rejected">(null);
-
 
   const [manualForm, setManualForm] = useState({
     firstName: "",
@@ -126,20 +124,25 @@ const DashboardCard: NextPage = () => {
       fd.append("file", selectedFile);
       const ocrRes = await fetch("http://localhost:5001/upload", { method: "POST", body: fd });
       if (!ocrRes.ok) throw new Error("OCR server error");
+
       const ocr = await ocrRes.json();
+      const clean = (s: string) => s?.replace(/,/g, "").trim();
       const formattedDOB = mapDOB(ocr.dob);
       const normalizedGender = mapGender(ocr.gender);
 
+      const firstName = clean(ocr.first_name ?? "");
+      const lastName = clean(ocr.last_name ?? "");
+
       setOcrValues({
-        first_name: ocr.first_name ?? "",
-        last_name: ocr.last_name ?? "",
+        first_name: firstName,
+        last_name: lastName,
         dob: formattedDOB,
-        gender: normalizedGender, 
+        gender: normalizedGender,
       });
 
       setManualForm({
-        firstName: ocr.first_name ?? "",
-        lastName: ocr.last_name ?? "",
+        firstName,
+        lastName,
         dob: formattedDOB,
         gender: normalizedGender,
       });
@@ -153,7 +156,7 @@ const DashboardCard: NextPage = () => {
 
   const handleMintOrSubmit = async () => {
     let imageUrl = "";
-  
+
     if (selectedFile) {
       const { data: uploadData, error } = await supabase.storage
         .from("kyc-images")
@@ -161,7 +164,7 @@ const DashboardCard: NextPage = () => {
           cacheControl: "3600",
           upsert: true,
         });
-  
+
       if (uploadData?.path) {
         const { data: publicUrl } = supabase.storage
           .from("kyc-images")
@@ -169,7 +172,7 @@ const DashboardCard: NextPage = () => {
         imageUrl = publicUrl.publicUrl;
       }
     }
-  
+
     await supabase.from("kyc_submissions").insert({
       wallet: publicKey?.toBase58(),
       name: `${manualForm.firstName} ${manualForm.lastName}`,
@@ -178,7 +181,7 @@ const DashboardCard: NextPage = () => {
       status: "pending",
       image_url: imageUrl,
     });
-  
+
     setSubmissionStatus("pending");
     setModalStep("success");
   };
@@ -249,7 +252,7 @@ const DashboardCard: NextPage = () => {
       .order("submitted_at", { ascending: false })
       .limit(1)
       .single();
-  
+
     if (data) {
       const [firstName, lastName] = (data.name || "").split(" ");
       setManualForm({
@@ -264,13 +267,12 @@ const DashboardCard: NextPage = () => {
         dob: "",
         gender: "",
       });
-      setShowModal(true);       
-      setModalStep("minting");  
-  
-      // slight delay before mint starts for smoother UI
+      setShowModal(true);
+      setModalStep("minting");
       setTimeout(() => handleMint(), 250);
     }
   };
+
   return (
     <div className="bg-gray-900 shadow rounded-lg p-6 border border-gray-800">
       <div className="flex justify-between items-center mb-6">
