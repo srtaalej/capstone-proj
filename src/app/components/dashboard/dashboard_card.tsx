@@ -189,15 +189,49 @@ const DashboardCard: NextPage = () => {
   const handleMint = async () => {
     try {
       if (!publicKey || !signTransaction || !signAllTransactions) return;
-
+  
+      const { data } = await supabase
+        .from("kyc_submissions")
+        .select("*")
+        .eq("wallet", publicKey.toBase58())
+        .eq("status", "approved")
+        .order("submitted_at", { ascending: false })
+        .limit(1)
+        .single();
+  
+      if (!data) {
+        throw new Error("No approved KYC data found.");
+      }
+  
+      const clean = (s: string) => s?.replace(/[^a-zA-Z]/g, "").trim();
+      const [firstName, ...rest] = (data.name || "").split(" ");
+      const lastName = rest.join(" ");
+  
+      const payload = {
+        name: `${clean(firstName)}${clean(lastName)}`.slice(0, 9),
+        dob: data.dob || "",
+        gender: (data.gender || "").slice(0, 1),
+      };
+  
+      console.log("Minting with:", payload);
+      setModalStep("minting");
+  
       const provider = new AnchorProvider(
         connection,
         { publicKey, signTransaction, signAllTransactions } as any,
         { commitment: "confirmed", preflightCommitment: "confirmed" }
       );
+  
       const program = new Program(idl, NFT_ID_PROGRAM_ID, provider);
-      const [mint] = PublicKey.findProgramAddressSync([Buffer.from("mint"), publicKey.toBuffer()], NFT_ID_PROGRAM_ID);
-      const [tokenData] = PublicKey.findProgramAddressSync([Buffer.from("token_data"), mint.toBuffer()], NFT_ID_PROGRAM_ID);
+  
+      const [mint] = PublicKey.findProgramAddressSync(
+        [Buffer.from("mint"), publicKey.toBuffer()],
+        NFT_ID_PROGRAM_ID
+      );
+      const [tokenData] = PublicKey.findProgramAddressSync(
+        [Buffer.from("token_data"), mint.toBuffer()],
+        NFT_ID_PROGRAM_ID
+      );
       const [metadata] = PublicKey.findProgramAddressSync(
         [Buffer.from("metadata"), TOKEN_METADATA_PROGRAM_ID.toBuffer(), mint.toBuffer()],
         TOKEN_METADATA_PROGRAM_ID
@@ -209,15 +243,7 @@ const DashboardCard: NextPage = () => {
         TOKEN_PROGRAM_ID,
         ASSOCIATED_TOKEN_PROGRAM_ID
       );
-
-      const payload = {
-        name: `${manualForm.firstName}${manualForm.lastName}`.trim().slice(0, 9),
-        dob: manualForm.dob,
-        gender: manualForm.gender.slice(0, 1),
-      };
-
-      setModalStep("minting");
-
+  
       const sig = await program.methods
         .initiateToken(payload.name, payload.dob, payload.gender)
         .accounts({
@@ -233,7 +259,7 @@ const DashboardCard: NextPage = () => {
           tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
         })
         .rpc();
-
+  
       setTransactionId(sig);
       setModalStep("success");
       await checkNFTOwnership();
