@@ -1,56 +1,58 @@
-'use client'
+'use client';
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   fetchAllPolls,
   getCounter,
   getProvider,
   getReadonlyProvider,
   initialize,
-} from '../app/services/blockchain.service'
-import Link from 'next/link'
-import { Poll } from './utils/interfaces'
-import { BN } from '@coral-xyz/anchor'
-import { useWallet } from '@solana/wallet-adapter-react'
-import { toast } from 'react-toastify'
-import { PlusIcon } from '@heroicons/react/20/solid'
+} from '../app/services/blockchain.service';
+import Link from 'next/link';
+import { Poll } from './utils/interfaces';
+import { BN } from '@coral-xyz/anchor';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { toast } from 'react-toastify';
+import { PlusIcon } from '@heroicons/react/20/solid';
 
 export default function Page() {
-  const [polls, setPolls] = useState<Poll[]>([])
-  const { publicKey, signTransaction, sendTransaction } = useWallet()
-  const [isInitialized, setIsInitialized] = useState<boolean>(false)
-  const programReadOnly = useMemo(() => getReadonlyProvider(), [])
+  const [polls, setPolls] = useState<Poll[]>([]);
+  const { publicKey, signTransaction, sendTransaction } = useWallet();
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [disabledLink, setDisabledLink] = useState(false);
+
+  const programReadOnly = useMemo(() => getReadonlyProvider(), []);
 
   const program = useMemo(
     () => getProvider(publicKey, signTransaction, sendTransaction),
     [publicKey, signTransaction, sendTransaction]
-  )
+  );
 
   const fetchData = async () => {
-    fetchAllPolls(programReadOnly).then((data) => setPolls(data as any))
-    const count = await getCounter(programReadOnly)
-    setIsInitialized(count.gte(new BN(0)))
-  }
+    fetchAllPolls(programReadOnly).then((data) => setPolls(data as any));
+    const count = await getCounter(programReadOnly);
+    setIsInitialized(count.gte(new BN(0)));
+  };
 
   useEffect(() => {
-    if (!programReadOnly) return
-    fetchData()
-  }, [programReadOnly])
+    if (!programReadOnly) return;
+    fetchData();
+  }, [programReadOnly]);
 
   const handleInit = async () => {
-    if (isInitialized && !!publicKey) return
+    if (isInitialized && !!publicKey) return;
 
     await toast.promise(
       new Promise<void>(async (resolve, reject) => {
         try {
-          const tx = await initialize(program!, publicKey!)
-          console.log(tx)
+          const tx = await initialize(program!, publicKey!);
+          console.log(tx);
 
-          await fetchData()
-          resolve(tx as any)
+          await fetchData();
+          resolve(tx as any);
         } catch (error) {
-          console.error('Transaction failed:', error)
-          reject(error)
+          console.error('Transaction failed:', error);
+          reject(error);
         }
       }),
       {
@@ -58,8 +60,17 @@ export default function Page() {
         success: 'Transaction successful 👌',
         error: 'Encountered error 🤯',
       }
-    )
-  }
+    );
+  };
+
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (disabledLink) {
+      e.preventDefault();
+      return;
+    }
+    setDisabledLink(true);
+    setTimeout(() => setDisabledLink(false), 3000);
+  };
 
   return (
     <div className="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
@@ -130,12 +141,15 @@ export default function Page() {
                       {poll.candidates}
                     </p>
                   </div>
-                  <Link
+                  <a
                     href={`/polls/${poll.publicKey}`}
-                    className="block w-full text-center bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2 px-4 rounded-md transition duration-200"
+                    onClick={(e) => handleClick(e, `/polls/${poll.publicKey}`)}
+                    className={`block w-full text-center ${
+                      disabledLink ? 'bg-gray-500 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500'
+                    } text-white font-semibold py-2 px-4 rounded-md transition duration-200`}
                   >
                     View Poll
-                  </Link>
+                  </a>
                 </div>
               ))}
             </div>
@@ -143,5 +157,5 @@ export default function Page() {
         </div>
       </div>
     </div>
-  )
+  );
 }

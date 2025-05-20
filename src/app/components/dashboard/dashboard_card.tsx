@@ -70,18 +70,35 @@ const DashboardCard: NextPage = () => {
 
   useEffect(() => {
     if (!publicKey) return;
-    const checkStatus = async () => {
+  
+    const checkStatusAndSetForm = async () => {
       const { data } = await supabase
         .from("kyc_submissions")
-        .select("status")
+        .select("*")
         .eq("wallet", publicKey.toBase58())
         .order("submitted_at", { ascending: false })
         .limit(1)
         .single();
-      setSubmissionStatus(data?.status || null);
+  
+      if (data?.status) {
+        setSubmissionStatus(data.status);
+  
+        if (data.status === "approved") {
+          const [firstName, ...rest] = (data.name || "").split(" ");
+          const lastName = rest.join(" ");
+          setManualForm({
+            firstName: firstName || "",
+            lastName: lastName || "",
+            dob: data.dob || "",
+            gender: data.gender || "",
+          });
+        }
+      }
     };
-    checkStatus();
+  
+    checkStatusAndSetForm();
   }, [publicKey]);
+  
 
   const checkNFTOwnership = useCallback(async () => {
     if (!publicKey) {

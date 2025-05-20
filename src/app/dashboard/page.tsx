@@ -33,12 +33,7 @@ export default function DashboardPage() {
           <DashboardCard />
           
           {/* Additional dashboard sections can be added here */}
-          <div className="bg-gray-800 rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-white mb-4">Your Voting Activity</h2>
-            <p className="text-gray-300">
-              Your voting history and created polls will appear here.
-            </p>
-          </div>
+         
         </div>
       </div>
     </div>
